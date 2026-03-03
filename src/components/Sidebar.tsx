@@ -7,6 +7,28 @@ import { useState, useEffect } from "react";
 const navigation = [
     { name: "แดชบอร์ด", href: "/dashboard", icon: "📊" },
     {
+        name: "ฝ่ายขาย / CRM",
+        icon: "💼",
+        children: [
+            { name: "ใบเสนอราคา (Quotations)", href: "/crm/quotations" },
+        ]
+    },
+    {
+        name: "จัดการออร์เดอร์ (OMS)",
+        icon: "📦",
+        children: [
+            { name: "คลังสินค้ากลาง (Products)", href: "/oms/products" },
+            { name: "นำเข้าออร์เดอร์ (Import)", href: "/oms/import" },
+        ]
+    },
+    {
+        name: "การเงิน (Finance)",
+        icon: "💰",
+        children: [
+            { name: "กระแสเงินสด (Cash Flow)", href: "/finance/cashflow" },
+        ]
+    },
+    {
         name: "ระบบบุคคล (HR)",
         icon: "👥",
         children: [
