@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -30,10 +31,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         const { id } = await params;
         const body = await request.json();
         const {
-            name, role, employeeType, position, wageRate, status, bankAccount, departmentId, image,
+            name, role, userRoleId, password, employeeType, position, wageRate, status, bankAccount, departmentId, image,
             idCardNumber, dob, gender, address, emergencyContact, emergencyRelation,
             mbti, enneagram, tshirtSize, foodAllergies,
-            startDate, probationEndDate, managerId
+            startDate, probationEndDate, managerId,
+            customLat, customLng, customRadius, customWorkStart, customWorkEnd
         } = body;
 
         // Transaction to update both employee and user
@@ -61,16 +63,28 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                     ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
                     ...(probationEndDate !== undefined && { probationEndDate: probationEndDate ? new Date(probationEndDate) : null }),
                     ...(managerId !== undefined && { managerId }),
+                    ...(customLat !== undefined && { customLat: customLat ? parseFloat(customLat) : null }),
+                    ...(customLng !== undefined && { customLng: customLng ? parseFloat(customLng) : null }),
+                    ...(customRadius !== undefined && { customRadius: customRadius ? parseFloat(customRadius) : null }),
+                    ...(customWorkStart !== undefined && { customWorkStart: customWorkStart || null }),
+                    ...(customWorkEnd !== undefined && { customWorkEnd: customWorkEnd || null }),
                 },
                 include: { user: true },
             });
 
-            if (name || role) {
+            if (name !== undefined || role !== undefined || userRoleId !== undefined || password) {
+                let hashedPassword;
+                if (password) {
+                    hashedPassword = await bcrypt.hash(password, 10);
+                }
+
                 await tx.user.update({
                     where: { id: emp.userId },
                     data: {
-                        name: name || emp.user.name,
-                        role: role || emp.user.role,
+                        ...(name !== undefined && { name }),
+                        ...(role !== undefined && { role }),
+                        ...(userRoleId !== undefined && { userRoleId: userRoleId || null }),
+                        ...(hashedPassword && { password: hashedPassword }),
                     },
                 });
             }

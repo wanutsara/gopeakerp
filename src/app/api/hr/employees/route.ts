@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { requirePermission } from "@/lib/rbac";
 
 export async function GET() {
     try {
+        await requirePermission("HR", "READ");
         const employees = await prisma.employee.findMany({
             include: { user: true },
             orderBy: { user: { name: 'asc' } }
@@ -17,6 +19,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+        await requirePermission("HR", "WRITE");
         const body = await request.json();
         const {
             name, email, password, role,
@@ -41,6 +44,7 @@ export async function POST(request: Request) {
                     email,
                     password: hashedPassword,
                     role: role || "STAFF",
+                    image: image || null,
                 },
             });
 
@@ -51,10 +55,9 @@ export async function POST(request: Request) {
                     position: position || "",
                     wageRate: parseFloat(wageRate) || 0,
                     status: status || "ACTIVE",
-                    bankAccount: bankAccount || "",
-                    image: image || null,
+                    bankAccount,
                     departmentId: departmentId || null,
-                    idCardNumber: idCardNumber || null,
+                    idCardNumber: idCardNumber ? idCardNumber : null,
                     dob: dob ? new Date(dob) : null,
                     gender: gender || null,
                     address: address || null,

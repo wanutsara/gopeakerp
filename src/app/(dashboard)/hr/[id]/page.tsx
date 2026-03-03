@@ -21,9 +21,12 @@ export default function EditEmployeePage() {
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);
     const [docForm, setDocForm] = useState({ type: 'PAYSLIP', title: '', fileUrl: '' });
 
+    const [isLeaveQuotaModalOpen, setIsLeaveQuotaModalOpen] = useState(false);
+    const [leaveQuotaForm, setLeaveQuotaForm] = useState({ year: new Date().getFullYear(), sickLeaveTotal: 30, personalLeaveTotal: 6, vacationTotal: 6 });
+
     const [formData, setFormData] = useState({
         // Auth / Basics
-        name: "", email: "", role: "",
+        name: "", email: "", password: "", role: "", userRoleId: "",
 
         // Personal Info
         idCardNumber: "", dob: "", gender: "", address: "", emergencyContact: "", emergencyRelation: "",
@@ -33,11 +36,15 @@ export default function EditEmployeePage() {
         departmentId: "", managerId: "", startDate: "", probationEndDate: "",
 
         // Culture
-        mbti: "", enneagram: "", tshirtSize: "", foodAllergies: ""
+        mbti: "", enneagram: "", tshirtSize: "", foodAllergies: "",
+
+        // Attendance Override
+        customLat: "", customLng: "", customRadius: "", customWorkStart: "", customWorkEnd: ""
     });
 
     const { data: departments } = useSWR("/api/hr/departments", fetcher);
     const { data: employeesList } = useSWR("/api/hr/employees", fetcher);
+    const { data: userRoles } = useSWR("/api/settings/roles", fetcher);
 
     useEffect(() => {
         const fetchEmployee = async () => {
@@ -51,7 +58,9 @@ export default function EditEmployeePage() {
                 setFormData({
                     name: emp.user?.name || "",
                     email: emp.user?.email || "",
+                    password: "", // Keep empty
                     role: emp.user?.role || "STAFF",
+                    userRoleId: emp.user?.userRoleId || "",
 
                     idCardNumber: emp.idCardNumber || "",
                     dob: emp.dob ? emp.dob.split('T')[0] : "",
@@ -74,6 +83,12 @@ export default function EditEmployeePage() {
                     enneagram: emp.enneagram || "",
                     tshirtSize: emp.tshirtSize || "",
                     foodAllergies: emp.foodAllergies || "",
+
+                    customLat: emp.customLat ? emp.customLat.toString() : "",
+                    customLng: emp.customLng ? emp.customLng.toString() : "",
+                    customRadius: emp.customRadius ? emp.customRadius.toString() : "",
+                    customWorkStart: emp.customWorkStart || "",
+                    customWorkEnd: emp.customWorkEnd || "",
                 });
             } catch (err: any) {
                 setError(err.message || "Failed to load employee");
@@ -130,6 +145,31 @@ export default function EditEmployeePage() {
         } catch (err: any) {
             setError(err.message);
             setLoading(false);
+        }
+    };
+
+    const handleUpdateLeaveQuota = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            const res = await fetch("/api/hr/leave-balances", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    employeeId: params.id,
+                    ...leaveQuotaForm
+                })
+            });
+            if (res.ok) {
+                setIsLeaveQuotaModalOpen(false);
+                const updatedRes = await fetch(`/api/hr/employees/${params.id}`);
+                const updatedEmp = await updatedRes.json();
+                setEmployeeData(updatedEmp);
+            } else {
+                alert("Failed to update leave quota");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error updating leave quota");
         }
     };
 
@@ -227,12 +267,26 @@ export default function EditEmployeePage() {
                                         <input type="email" value={formData.email} disabled className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 text-gray-500 rounded-xl cursor-not-allowed" />
                                     </div>
                                     <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">ตั้งรหัสผ่านใหม่ (ปล่อยว่างถ้าไม่เปลี่ยน)</label>
+                                        <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition" />
+                                    </div>
+                                    <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">สิทธิ์ของระบบ (App Role)</label>
                                         <select name="role" value={formData.role} onChange={handleChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition">
                                             <option value="STAFF">พนักงานทั่วไป (STAFF)</option>
                                             <option value="MANAGER">ผู้จัดการ (MANAGER)</option>
                                             <option value="OWNER">เจ้าของกิจการ (OWNER)</option>
                                         </select>
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">กลุ่มสิทธิ์เข้าถึง (RBAC Role)</label>
+                                        <select name="userRoleId" value={formData.userRoleId} onChange={handleChange} className="w-full xl:w-1/2 px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition">
+                                            <option value="">-- ไม่ระบุ (ใช้สิทธิ์ตาม App Role ปกติ) --</option>
+                                            {userRoles?.map((r: any) => (
+                                                <option key={r.id} value={r.id}>{r.name}</option>
+                                            ))}
+                                        </select>
+                                        <p className="mt-1 text-xs text-gray-500">เลือกกลุ่มสิทธิ์เพื่อกำหนดระดับการเข้าถึงข้อมูลแบบละเอียด เช่น สิทธิ์ดูอย่างเดียว, สิทธิ์แก้ไข</p>
                                     </div>
                                 </div>
                             </section>
@@ -348,6 +402,37 @@ export default function EditEmployeePage() {
                                     </div>
                                 </div>
                             </section>
+
+                            <section>
+                                <h3 className="text-sm font-bold tracking-wider text-gray-400 uppercase mb-4">การลงเวลา (Attendance Settings)</h3>
+                                <p className="text-xs text-gray-500 mb-4">ปล่อยว่างไว้หากต้องการให้พนักงานคนนี้ใช้ค่า "เวลาและสถานที่" ตามแผนกที่สังกัดอยู่ หรือตามค่ามาตรฐานบริษัท</p>
+                                <div className="bg-blue-50/30 p-5 rounded-2xl border border-blue-100">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">เวลาเริ่มงานเฉพาะตัว</label>
+                                            <input type="time" name="customWorkStart" value={formData.customWorkStart} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl outline-none" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">เวลาเลิกงานเฉพาะตัว</label>
+                                            <input type="time" name="customWorkEnd" value={formData.customWorkEnd} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl outline-none" />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">ละติจูด (Custom Lat)</label>
+                                            <input type="number" step="any" name="customLat" value={formData.customLat} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl outline-none" placeholder="13.756" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">ลองจิจูด (Custom Lng)</label>
+                                            <input type="number" step="any" name="customLng" value={formData.customLng} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl outline-none" placeholder="100.501" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">รัศมีที่อนุญาต (เมตร)</label>
+                                            <input type="number" name="customRadius" value={formData.customRadius} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl outline-none" placeholder="100" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
                         </div>
                     )}
 
@@ -439,24 +524,53 @@ export default function EditEmployeePage() {
                     {activeTab === 'LEAVES_DOCS' && (
                         <div className="space-y-8 animate-in fade-in duration-300">
                             <section>
-                                <h3 className="text-sm font-bold tracking-wider text-gray-400 uppercase mb-4">สรุปสิทธิการลาประจำปี (Leave Balances)</h3>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-sm font-bold tracking-wider text-gray-400 uppercase">สรุปสิทธิการลาประจำปี (Leave Balances)</h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const currentYear = new Date().getFullYear();
+                                            const balance = employeeData?.leaveBalances?.find((b: { year: number }) => b.year === currentYear);
+                                            setLeaveQuotaForm({
+                                                year: currentYear,
+                                                sickLeaveTotal: balance?.sickLeaveTotal ?? 30,
+                                                personalLeaveTotal: balance?.personalLeaveTotal ?? 6,
+                                                vacationTotal: balance?.vacationTotal ?? 6
+                                            });
+                                            setIsLeaveQuotaModalOpen(true);
+                                        }}
+                                        className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg font-semibold hover:bg-gray-200 transition"
+                                    >
+                                        ✏️ แก้ไขโควต้า
+                                    </button>
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {['SICK', 'PERSONAL', 'VACATION'].map(type => {
-                                        const balance = employeeData?.leaveBalances?.find((b: any) => b.leaveType === type);
+                                        const currentYear = new Date().getFullYear();
+                                        const leaveBalanceYearObj = employeeData?.leaveBalances?.find((b: { year: number }) => b.year === currentYear);
+
                                         const labels: any = { SICK: 'ลาป่วย', PERSONAL: 'ลากิจ', VACATION: 'ลาพักร้อน' };
                                         const colors: any = { SICK: 'bg-red-50 text-red-700 border-red-100', PERSONAL: 'bg-orange-50 text-orange-700 border-orange-100', VACATION: 'bg-blue-50 text-blue-700 border-blue-100' };
+
+                                        let total = 0;
+                                        let used = 0;
+                                        if (leaveBalanceYearObj) {
+                                            if (type === 'SICK') { total = leaveBalanceYearObj.sickLeaveTotal; used = leaveBalanceYearObj.sickLeaveUsed; }
+                                            if (type === 'PERSONAL') { total = leaveBalanceYearObj.personalLeaveTotal; used = leaveBalanceYearObj.personalLeaveUsed; }
+                                            if (type === 'VACATION') { total = leaveBalanceYearObj.vacationTotal; used = leaveBalanceYearObj.vacationUsed; }
+                                        }
 
                                         return (
                                             <div key={type} className={`p-5 rounded-2xl border ${colors[type]}`}>
                                                 <p className="text-sm font-semibold mb-1">{labels[type]} ({type})</p>
-                                                {balance ? (
+                                                {leaveBalanceYearObj ? (
                                                     <div className="flex justify-between items-end mt-4">
                                                         <div>
-                                                            <p className="text-3xl font-bold">{balance.usedDays}</p>
+                                                            <p className="text-3xl font-bold">{used}</p>
                                                             <p className="text-xs opacity-80 mt-1">ใช้ไปแล้ว (วัน)</p>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-xl font-bold opacity-80">{balance.totalQuota}</p>
+                                                            <p className="text-xl font-bold opacity-80">{total}</p>
                                                             <p className="text-xs opacity-80 mt-1">โควต้าทั้งหมด</p>
                                                         </div>
                                                     </div>
@@ -598,6 +712,74 @@ export default function EditEmployeePage() {
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow"
                                 >
                                     บันทึกเอกสาร
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Leave Quota Edit Modal */}
+            {isLeaveQuotaModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl w-full max-w-sm p-6 relative">
+                        <button
+                            onClick={() => setIsLeaveQuotaModalOpen(false)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold"
+                        >
+                            ✕
+                        </button>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">แก้ไขโควตาวันลาพนักงาน</h3>
+                        <p className="text-sm text-gray-500 mb-6">ระบุจำนวนวันลาที่สามารถใช้ได้ในปี {leaveQuotaForm.year}</p>
+
+                        <form onSubmit={handleUpdateLeaveQuota} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">โควตาลากิจ (วัน)</label>
+                                <input
+                                    type="number"
+                                    min="0" step="0.5"
+                                    value={leaveQuotaForm.personalLeaveTotal}
+                                    onChange={(e) => setLeaveQuotaForm(prev => ({ ...prev, personalLeaveTotal: parseFloat(e.target.value) }))}
+                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">โควตาลาพักร้อน (วัน)</label>
+                                <input
+                                    type="number"
+                                    min="0" step="0.5"
+                                    value={leaveQuotaForm.vacationTotal}
+                                    onChange={(e) => setLeaveQuotaForm(prev => ({ ...prev, vacationTotal: parseFloat(e.target.value) }))}
+                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">โควตาลาป่วย (วัน)</label>
+                                <input
+                                    type="number"
+                                    min="0" step="0.5"
+                                    value={leaveQuotaForm.sickLeaveTotal}
+                                    onChange={(e) => setLeaveQuotaForm(prev => ({ ...prev, sickLeaveTotal: parseFloat(e.target.value) }))}
+                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                    required
+                                />
+                                <p className="mt-1 text-xs text-gray-500">หมายเหตุ: กฎหมายแรงงานกำหนดให้ลาป่วยได้ไม่ต่ำกว่า 30 วัน/ปี</p>
+                            </div>
+                            <div className="pt-4 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsLeaveQuotaModalOpen(false)}
+                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200"
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow"
+                                >
+                                    บันทึกโควตา
                                 </button>
                             </div>
                         </form>

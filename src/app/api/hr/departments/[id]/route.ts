@@ -3,28 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: NextRequest) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-        const departments = await prisma.department.findMany({
-            include: {
-                _count: {
-                    select: { employees: true }
-                }
-            },
-            orderBy: { createdAt: 'desc' }
-        });
-
-        return NextResponse.json(departments);
-    } catch (err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
-    }
-}
-
-export async function POST(req: NextRequest) {
-    try {
+        const { id } = await params;
         const session = await getServerSession(authOptions);
         if (!session || (session.user.role !== "OWNER" && session.user.role !== "MANAGER")) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -33,9 +14,8 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { name, description, lat, lng, radius, workStart, workEnd } = body;
 
-        if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
-
-        const department = await prisma.department.create({
+        const department = await prisma.department.update({
+            where: { id },
             data: {
                 name,
                 description,
@@ -47,11 +27,26 @@ export async function POST(req: NextRequest) {
             }
         });
 
-        return NextResponse.json(department, { status: 201 });
+        return NextResponse.json(department);
     } catch (err: any) {
-        if (err.code === 'P2002') {
-            return NextResponse.json({ error: "Department name already exists" }, { status: 400 });
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const { id } = await params;
+        const session = await getServerSession(authOptions);
+        if (!session || session.user.role !== "OWNER") {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
+
+        await prisma.department.delete({
+            where: { id }
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

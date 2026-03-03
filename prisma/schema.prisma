@@ -20,11 +20,37 @@ model User {
   password      String?
   image         String?
   role          Role      @default(STAFF)
+  userRoleId    String?   // Relation to custom UserRole
+  userRole      UserRole? @relation(fields: [userRoleId], references: [id], onDelete: SetNull)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   employee      Employee?
   activityLogs  ActivityLog[]
+}
+
+model UserRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  users       User[]
+  permissions RolePermission[]
+}
+
+model RolePermission {
+  id          String   @id @default(cuid())
+  roleId      String
+  role        UserRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  module      String   // e.g. "HR", "PAYROLL", "CRM", "SETTINGS", "LEAVE"
+  canRead     Boolean  @default(false)
+  canWrite    Boolean  @default(false)
+  canDelete   Boolean  @default(false)
+
+  @@unique([roleId, module])
 }
 
 enum Role {
@@ -37,10 +63,17 @@ model Department {
   id          String     @id @default(cuid())
   name        String     @unique
   description String?
-  
-  employees   Employee[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  
+  // Attendance Settings Override
+  lat         Float?
+  lng         Float?
+  radius      Float?
+  workStart   String?
+  workEnd     String?
+
+  employees   Employee[]
 }
 
 model Employee {
@@ -79,11 +112,19 @@ model Employee {
   manager      Employee?  @relation("EmployeeToManager", fields: [managerId], references: [id], onDelete: SetNull)
   subordinates Employee[] @relation("EmployeeToManager")
 
+  // Attendance Settings Override (Individual)
+  customLat          Float?
+  customLng          Float?
+  customRadius       Float?
+  customWorkStart    String?
+  customWorkEnd      String?
+
   attendances   Attendance[]
   leaveRequests LeaveRequest[]
   leaveBalances LeaveBalance[]
   payrolls      Payroll[]
   documents     EmployeeDocument[]
+  timeLogs      TimeLog[]
 }
 
 enum EmployeeType {
@@ -148,6 +189,34 @@ model LeaveBalance {
   vacationUsed      Float    @default(0)
 
   @@unique([employeeId, year])
+}
+
+model CompanySetting {
+  id               String   @id @default(cuid())
+  defaultLat       Float?
+  defaultLng       Float?
+  defaultRadius    Float    @default(100)
+  defaultWorkStart String   @default("09:00")
+  defaultWorkEnd   String   @default("18:00")
+  updatedAt        DateTime @updatedAt
+}
+
+model TimeLog {
+  id           String    @id @default(cuid())
+  employeeId   String
+  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date         DateTime  @db.Date
+  checkInTime  DateTime?
+  checkInLat   Float?
+  checkInLng   Float?
+  checkOutTime DateTime?
+  checkOutLat  Float?
+  checkOutLng  Float?
+  status       String    @default("ON_TIME") // ON_TIME, LATE, ABSENT, HALF_DAY
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([employeeId, date])
 }
 
 model Payroll {
