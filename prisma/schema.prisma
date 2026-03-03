@@ -1,0 +1,337 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------
+// User & HR Module
+// ----------------------------------------------------------------------
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  password      String?
+  image         String?
+  role          Role      @default(STAFF)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  employee      Employee?
+  activityLogs  ActivityLog[]
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+model Department {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  
+  employees   Employee[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Employee {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  image        String?   // Store URL or path for employee avatar picture
+  employeeType EmployeeType @default(MONTHLY)
+  position     String?
+  wageRate     Float     @default(0) // เงินเดือน หรือ ค่าแรงรายวัน
+  startDate    DateTime?
+  status       Status    @default(ACTIVE)
+  bankAccount  String?
+
+  attendances  Attendance[]
+  leaveRequests LeaveRequest[]
+  payrolls     Payroll[]
+}
+
+enum EmployeeType {
+  MONTHLY
+  DAILY
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+model Attendance {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  date        DateTime @db.Date // วันที่ทำงาน
+  checkIn     DateTime?
+  checkOut    DateTime?
+  hoursWorked Float?
+  notes       String?
+}
+
+model LeaveRequest {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  type        LeaveType
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  reason      String?
+  status      ApprovalStatus @default(PENDING)
+  approvedBy  String? // Store user ID who approved
+}
+
+enum LeaveType {
+  SICK
+  VACATION
+  PERSONAL
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Payroll {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  month       String   // "YYYY-MM"
+  baseSalary  Float
+  otAmount    Float    @default(0)
+  otherIncome Float    @default(0) // รายได้อื่นๆ เพิ่มเติม
+  bonus       Float    @default(0)
+  deductions  Float    @default(0)
+  netSalary   Float
+  status      PaymentStatus @default(UNPAID)
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+}
+
+// ----------------------------------------------------------------------
+// CRM Module
+// ----------------------------------------------------------------------
+model Customer {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String?
+  address     String?
+  source      String?  // Facebook, Shopee, TikTok
+  
+  tags        String?  // e.g "VIP, Returning" JSON string or comma separated
+  totalSpent  Float    @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders      Order[]
+}
+
+// ----------------------------------------------------------------------
+// Product & Inventory Module
+// ----------------------------------------------------------------------
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  sku         String?  @unique
+  costPrice   Float    @default(0) // ต้นทุนหลักเป็นบาท
+  salePrice   Float    @default(0)
+  stock       Int      @default(0)
+  images      String?  // JSON string or comma separated URLs
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems  OrderItem[]
+}
+
+// ----------------------------------------------------------------------
+// Pre-order Module
+// ----------------------------------------------------------------------
+model PreorderBatch {
+  id               String   @id @default(cuid())
+  batchName        String   // "รอบกุมภาพันธ์ - สินค้า A"
+  status           PreorderStatus @default(COLLECTING)
+  
+  orderDate        DateTime? // วันสั่งจีน
+  estimatedArrival DateTime? // วันคาดว่าถึงไทย
+  
+  costRMB          Float?    // ต้นทุนหยวน
+  exchangeRate     Float?    // เรทเงินหยวน-บาท
+  costTHB          Float?    // ต้นทุนรวมบาท
+  shippingCost     Float?    // ค่าขนส่งเข้าไทย
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  items            PreorderItem[]
+}
+
+enum PreorderStatus {
+  COLLECTING
+  ORDERED_FROM_CHINA
+  SHIPPING_TO_THAI
+  ARRIVED
+  COMPLETED
+}
+
+model PreorderItem {
+  id               String   @id @default(cuid())
+  preorderBatch    PreorderBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batchId          String
+  
+  productName      String
+  quantity         Int
+  costPerUnitRMB   Float?
+  customerName     String?  // กรณีไม่ได้ลิงก์กับ CRM ตรง
+  notes            String?
+}
+
+// ----------------------------------------------------------------------
+// Order Management Module
+// ----------------------------------------------------------------------
+model Order {
+  id          String   @id @default(cuid())
+  
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  
+  channel     SalesChannel // Facebook, Shopee, TikTok, Other
+  status      OrderStatus  @default(PENDING)
+  
+  subtotal    Float
+  shippingFee Float    @default(0)
+  discount    Float    @default(0)
+  total       Float
+  
+  notes       String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       OrderItem[]
+}
+
+enum SalesChannel {
+  FACEBOOK
+  SHOPEE
+  TIKTOK
+  OTHER
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PAID
+  SHIPPING
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  
+  productName String   // เก็บไว้เผื่อสินค้าโดนลบ
+  quantity    Int
+  price       Float    // ราคาตอนขาย
+}
+
+// ----------------------------------------------------------------------
+// Financial Module
+// ----------------------------------------------------------------------
+model Transaction {
+  id          String   @id @default(cuid())
+  type        TransactionType
+  
+  amount      Float
+  currency    Currency @default(THB)
+  amountTHB   Float    // แปลงเป็นบาทเสมอเพื่อง่ายต่อการสรุป
+  
+  category    TransactionCategory
+  subCategory String?  // เช่น FB Ads, Shopee Ads, เงินเดือนพนักงาน
+  
+  description String?
+  date        DateTime @default(now())
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum Currency {
+  THB
+  RMB
+  USD
+}
+
+enum TransactionCategory {
+  PRODUCT_COST    // 📦 ต้นทุนสินค้า
+  ADVERTISING     // 📢 ค่าโฆษณา
+  SHIPPING        // 🚚 ค่าขนส่ง
+  PAYROLL         // 👥 ค่าพนักงาน
+  OPERATIONAL     // 🏢 ค่าดำเนินงาน
+  OTHER           // 📋 อื่นๆ
+  SALES_REVENUE   // 💰 รายได้จากการขาย (จากระบบออเดอร์)
+}
+
+// ----------------------------------------------------------------------
+// Ads Tracking Module
+// ----------------------------------------------------------------------
+model AdSpend {
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  platform    SalesChannel
+  
+  amountSpent Float
+  reach       Int?
+  clicks      Int?
+  orders      Int?     // ออเดอร์ที่เกิดจากแอด
+  
+  notes       String?
+}
+
+// ----------------------------------------------------------------------
+// System Module
+// ----------------------------------------------------------------------
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  action      String   // "CREATE", "UPDATE", "DELETE", "LOGIN"
+  entity      String   // "ORDER", "PRODUCT", "EMPLOYEE"
+  entityId    String?
+  details     String?
+  
+  timestamp   DateTime @default(now())
+}

@@ -1,0 +1,63 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const { id } = await params;
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        if (session.user.role !== "OWNER" && session.user.role !== "MANAGER") {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
+        const body = await req.json();
+        const { status, otherIncome, bonus, deductions } = body;
+
+        const currentPayroll = await prisma.payroll.findUnique({ where: { id } });
+        if (!currentPayroll) {
+            return NextResponse.json({ error: "Payroll not found" }, { status: 404 });
+        }
+
+        const dataToUpdate: any = {};
+        if (status !== undefined) {
+            if (status !== "UNPAID" && status !== "PAID") return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+            dataToUpdate.status = status;
+        }
+
+        // Support editing incomes and auto-recalculate net salary
+        let newNetSalary = currentPayroll.netSalary;
+        let needsRecalc = false;
+
+        const finalOtherIncome = otherIncome ?? currentPayroll.otherIncome;
+        const finalBonus = bonus ?? currentPayroll.bonus;
+        const finalDeductions = deductions ?? currentPayroll.deductions;
+
+        if (otherIncome !== undefined || bonus !== undefined || deductions !== undefined) {
+            dataToUpdate.otherIncome = finalOtherIncome;
+            dataToUpdate.bonus = finalBonus;
+            dataToUpdate.deductions = finalDeductions;
+            needsRecalc = true;
+        }
+
+        if (needsRecalc) {
+            dataToUpdate.netSalary = currentPayroll.baseSalary + currentPayroll.otAmount + finalBonus + finalOtherIncome - finalDeductions;
+        }
+
+        const updatedPayroll = await prisma.payroll.update({
+            where: {
+                id
+            },
+            data: dataToUpdate
+        });
+
+        return NextResponse.json(updatedPayroll);
+    } catch (err: any) {
+        console.error("Payroll Update Error:", err);
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+}
