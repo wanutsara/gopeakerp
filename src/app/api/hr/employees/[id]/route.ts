@@ -1,11 +1,40 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const { id } = await params;
+        const employee = await prisma.employee.findUnique({
+            where: { id },
+            include: {
+                user: true,
+                department: true,
+                leaveBalances: true,
+                documents: true,
+            }
+        });
+
+        if (!employee) {
+            return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+        }
+
+        return NextResponse.json(employee);
+    } catch (error) {
+        console.error("Error fetching employee:", error);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+}
+
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
         const body = await request.json();
-        const { name, role, employeeType, position, wageRate, status, bankAccount, departmentId } = body;
+        const {
+            name, role, employeeType, position, wageRate, status, bankAccount, departmentId, image,
+            idCardNumber, dob, gender, address, emergencyContact, emergencyRelation,
+            mbti, enneagram, tshirtSize, foodAllergies,
+            startDate, probationEndDate, managerId
+        } = body;
 
         // Transaction to update both employee and user
         const updatedEmployee = await prisma.$transaction(async (tx) => {
@@ -18,6 +47,20 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                     status,
                     bankAccount,
                     departmentId: departmentId || null,
+                    ...(image !== undefined && { image }),
+                    ...(idCardNumber !== undefined && { idCardNumber }),
+                    ...(dob !== undefined && { dob: dob ? new Date(dob) : null }),
+                    ...(gender !== undefined && { gender }),
+                    ...(address !== undefined && { address }),
+                    ...(emergencyContact !== undefined && { emergencyContact }),
+                    ...(emergencyRelation !== undefined && { emergencyRelation }),
+                    ...(mbti !== undefined && { mbti }),
+                    ...(enneagram !== undefined && { enneagram }),
+                    ...(tshirtSize !== undefined && { tshirtSize }),
+                    ...(foodAllergies !== undefined && { foodAllergies }),
+                    ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
+                    ...(probationEndDate !== undefined && { probationEndDate: probationEndDate ? new Date(probationEndDate) : null }),
+                    ...(managerId !== undefined && { managerId }),
                 },
                 include: { user: true },
             });

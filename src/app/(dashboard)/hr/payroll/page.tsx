@@ -13,7 +13,7 @@ export default function PayrollPage() {
 
     // Modal states
     const [editingPayroll, setEditingPayroll] = useState<any>(null);
-    const [editForm, setEditForm] = useState({ otherIncome: 0, bonus: 0, deductions: 0 });
+    const [editForm, setEditForm] = useState({ otherIncome: 0, bonus: 0, deductions: 0, socialSecurityDeduction: 0, taxDeduction: 0 });
 
     const { data: payrolls, error, isLoading, mutate } = useSWR(`/api/hr/payroll?month=${selectedMonth}`, fetcher);
 
@@ -58,7 +58,9 @@ export default function PayrollPage() {
         setEditForm({
             otherIncome: payroll.otherIncome || 0,
             bonus: payroll.bonus || 0,
-            deductions: payroll.deductions || 0
+            deductions: payroll.deductions || 0,
+            socialSecurityDeduction: payroll.socialSecurityDeduction || 0,
+            taxDeduction: payroll.taxDeduction || 0
         });
     };
 
@@ -72,7 +74,9 @@ export default function PayrollPage() {
                 body: JSON.stringify({
                     otherIncome: Number(editForm.otherIncome),
                     bonus: Number(editForm.bonus),
-                    deductions: Number(editForm.deductions)
+                    deductions: Number(editForm.deductions),
+                    socialSecurityDeduction: Number(editForm.socialSecurityDeduction),
+                    taxDeduction: Number(editForm.taxDeduction)
                 })
             });
             if (res.ok) {
@@ -142,7 +146,9 @@ export default function PayrollPage() {
                                     <th className="px-6 py-3 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">พนักงาน</th>
                                     <th className="px-6 py-3 bg-gray-50 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">ฐานเงินเดือน</th>
                                     <th className="px-6 py-3 bg-gray-50 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">รายได้อื่นๆ / โบนัส / OT</th>
-                                    <th className="px-6 py-3 bg-gray-50 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">รายการหัก</th>
+                                    <th className="px-6 py-3 bg-gray-50 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">ประกันสังคม</th>
+                                    <th className="px-6 py-3 bg-gray-50 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">หักภาษี</th>
+                                    <th className="px-6 py-3 bg-gray-50 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">หักอื่นๆ</th>
                                     <th className="px-6 py-3 bg-gray-50 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">รับสุทธิ</th>
                                     <th className="px-6 py-3 bg-gray-50 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">สถานะการจ่าย</th>
                                     <th className="px-6 py-3 bg-gray-50 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">ดำเนินการ</th>
@@ -165,8 +171,10 @@ export default function PayrollPage() {
                                                 <span className="text-green-600 font-medium">+฿{(payroll.otAmount + payroll.bonus + (payroll.otherIncome || 0)).toLocaleString()}</span>
                                                 <button onClick={() => handleOpenEdit(payroll)} className="text-xs text-blue-500 hover:underline mt-1">แก้ไขรายได้/หัก</button>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-right">-฿{payroll.deductions.toLocaleString()}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 text-right">฿{payroll.netSalary.toLocaleString()}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-500 text-right">-฿{(payroll.socialSecurityDeduction || 0).toLocaleString()}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-500 text-right">-฿{(payroll.taxDeduction || 0).toLocaleString()}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-right">-฿{(payroll.deductions || 0).toLocaleString()}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 text-right">฿{(payroll.netSalary || 0).toLocaleString()}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-center">
                                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${payroll.status === "PAID" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                                                     {payroll.status === "PAID" ? "จ่ายแล้ว" : "รอการจ่าย"}
@@ -230,7 +238,25 @@ export default function PayrollPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">รายการหัก (Deductions)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">หักภาษี (Tax)</label>
+                                <input
+                                    type="number"
+                                    value={editForm.taxDeduction}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, taxDeduction: Number(e.target.value) }))}
+                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">หักประกันสังคม (Social Security)</label>
+                                <input
+                                    type="number"
+                                    value={editForm.socialSecurityDeduction}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, socialSecurityDeduction: Number(e.target.value) }))}
+                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">หักอื่นๆ (Other Deductions)</label>
                                 <input
                                     type="number"
                                     value={editForm.deductions}

@@ -51,17 +51,39 @@ model Employee {
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
+  // Core Profile
   image        String?   // Store URL or path for employee avatar picture
+  idCardNumber String?
+  dob          DateTime? @db.Date
+  gender       String?
+  address      String?
+  emergencyContact String?
+  emergencyRelation String?
+
+  // Culture & Fit
+  mbti         String?
+  enneagram    String?
+  tshirtSize   String?
+  foodAllergies String?
+
+  // Employment Details
   employeeType EmployeeType @default(MONTHLY)
   position     String?
   wageRate     Float     @default(0) // เงินเดือน หรือ ค่าแรงรายวัน
-  startDate    DateTime?
+  startDate    DateTime? @db.Date
+  probationEndDate DateTime? @db.Date
   status       Status    @default(ACTIVE)
   bankAccount  String?
 
-  attendances  Attendance[]
+  managerId    String?
+  manager      Employee?  @relation("EmployeeToManager", fields: [managerId], references: [id], onDelete: SetNull)
+  subordinates Employee[] @relation("EmployeeToManager")
+
+  attendances   Attendance[]
   leaveRequests LeaveRequest[]
-  payrolls     Payroll[]
+  leaveBalances LeaveBalance[]
+  payrolls      Payroll[]
+  documents     EmployeeDocument[]
 }
 
 enum EmployeeType {
@@ -95,6 +117,7 @@ model LeaveRequest {
   startDate   DateTime @db.Date
   endDate     DateTime @db.Date
   reason      String?
+  attachmentUrl String? // For medical certificates
   status      ApprovalStatus @default(PENDING)
   approvedBy  String? // Store user ID who approved
 }
@@ -111,6 +134,22 @@ enum ApprovalStatus {
   REJECTED
 }
 
+model LeaveBalance {
+  id                String   @id @default(cuid())
+  employeeId        String
+  employee          Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  year              Int
+  sickLeaveTotal    Float    @default(30)
+  sickLeaveUsed     Float    @default(0)
+  personalLeaveTotal Float   @default(6)
+  personalLeaveUsed Float    @default(0)
+  vacationTotal     Float    @default(6)
+  vacationUsed      Float    @default(0)
+
+  @@unique([employeeId, year])
+}
+
 model Payroll {
   id          String   @id @default(cuid())
   employeeId  String
@@ -121,7 +160,12 @@ model Payroll {
   otAmount    Float    @default(0)
   otherIncome Float    @default(0) // รายได้อื่นๆ เพิ่มเติม
   bonus       Float    @default(0)
-  deductions  Float    @default(0)
+  
+  socialSecurityDeduction Float @default(0) // ประกันสังคม (Max 750)
+  taxDeduction            Float @default(0) // ภาษีหัก ณ ที่จ่าย
+  lateDeduction           Float @default(0) // หักสาย/ขาดงาน
+  deductions              Float @default(0) // หักอื่นๆ รวม
+  
   netSalary   Float
   status      PaymentStatus @default(UNPAID)
 }
@@ -129,6 +173,27 @@ model Payroll {
 enum PaymentStatus {
   UNPAID
   PAID
+}
+
+model EmployeeDocument {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  type        DocumentType
+  title       String
+  fileUrl     String
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum DocumentType {
+  PAYSLIP
+  WARNING_LETTER
+  CONTRACT
+  MEDICAL_CERT
+  OTHER
 }
 
 // ----------------------------------------------------------------------

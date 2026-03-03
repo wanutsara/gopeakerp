@@ -75,14 +75,26 @@ export async function POST(req: NextRequest) {
                 // For now, we take `wageRate` as base monthly salary.
                 const baseSalary = emp.employeeType === 'MONTHLY' ? emp.wageRate : (emp.wageRate * 22);
 
+                // Calculate Thai Social Security (5%, max 750 THB from 15k base)
+                let socialSecurityDeduction = 0;
+                if (emp.employeeType === 'MONTHLY' && baseSalary >= 1650) {
+                    socialSecurityDeduction = Math.floor(Math.min(baseSalary * 0.05, 750));
+                }
+
+                const netSalary = baseSalary - socialSecurityDeduction;
+
                 newPayrollsToCreate.push({
                     employeeId: emp.id,
                     month,
                     baseSalary,
                     otAmount: 0,
+                    otherIncome: 0,
                     bonus: 0,
+                    socialSecurityDeduction,
+                    taxDeduction: 0,
+                    lateDeduction: 0,
                     deductions: 0,
-                    netSalary: baseSalary,
+                    netSalary,
                     status: "UNPAID" as const
                 });
             }

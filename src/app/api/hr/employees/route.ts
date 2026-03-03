@@ -18,7 +18,13 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, email, password, role, employeeType, position, wageRate, status, bankAccount, image, departmentId } = body;
+        const {
+            name, email, password, role,
+            employeeType, position, wageRate, status, bankAccount, image, departmentId,
+            idCardNumber, dob, gender, address, emergencyContact, emergencyRelation,
+            mbti, enneagram, tshirtSize, foodAllergies,
+            startDate, probationEndDate, managerId
+        } = body;
 
         if (!name || !email || !password) {
             return NextResponse.json({ error: "Missing required user fields" }, { status: 400 });
@@ -48,7 +54,19 @@ export async function POST(request: Request) {
                     bankAccount: bankAccount || "",
                     image: image || null,
                     departmentId: departmentId || null,
-                    startDate: new Date(),
+                    idCardNumber: idCardNumber || null,
+                    dob: dob ? new Date(dob) : null,
+                    gender: gender || null,
+                    address: address || null,
+                    emergencyContact: emergencyContact || null,
+                    emergencyRelation: emergencyRelation || null,
+                    mbti: mbti || null,
+                    enneagram: enneagram || null,
+                    tshirtSize: tshirtSize || null,
+                    foodAllergies: foodAllergies || null,
+                    startDate: startDate ? new Date(startDate) : new Date(),
+                    probationEndDate: probationEndDate ? new Date(probationEndDate) : null,
+                    managerId: managerId || null,
                 },
                 include: {
                     user: true,

@@ -16,7 +16,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }
 
         const body = await req.json();
-        const { status, otherIncome, bonus, deductions } = body;
+        const { status, otherIncome, bonus, deductions, socialSecurityDeduction, taxDeduction, lateDeduction } = body;
 
         const currentPayroll = await prisma.payroll.findUnique({ where: { id } });
         if (!currentPayroll) {
@@ -36,16 +36,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const finalOtherIncome = otherIncome ?? currentPayroll.otherIncome;
         const finalBonus = bonus ?? currentPayroll.bonus;
         const finalDeductions = deductions ?? currentPayroll.deductions;
+        const finalSS = socialSecurityDeduction ?? currentPayroll.socialSecurityDeduction;
+        const finalTax = taxDeduction ?? currentPayroll.taxDeduction;
+        const finalLate = lateDeduction ?? currentPayroll.lateDeduction;
 
-        if (otherIncome !== undefined || bonus !== undefined || deductions !== undefined) {
+        if (otherIncome !== undefined || bonus !== undefined || deductions !== undefined ||
+            socialSecurityDeduction !== undefined || taxDeduction !== undefined || lateDeduction !== undefined) {
             dataToUpdate.otherIncome = finalOtherIncome;
             dataToUpdate.bonus = finalBonus;
             dataToUpdate.deductions = finalDeductions;
+            dataToUpdate.socialSecurityDeduction = finalSS;
+            dataToUpdate.taxDeduction = finalTax;
+            dataToUpdate.lateDeduction = finalLate;
             needsRecalc = true;
         }
 
         if (needsRecalc) {
-            dataToUpdate.netSalary = currentPayroll.baseSalary + currentPayroll.otAmount + finalBonus + finalOtherIncome - finalDeductions;
+            dataToUpdate.netSalary = currentPayroll.baseSalary + currentPayroll.otAmount + finalBonus + finalOtherIncome
+                - finalDeductions - finalSS - finalTax - finalLate;
         }
 
         const updatedPayroll = await prisma.payroll.update({

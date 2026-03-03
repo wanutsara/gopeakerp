@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { type, startDate, endDate, reason } = body;
+        const { type, startDate, endDate, reason, attachmentUrl } = body;
 
         if (!type || !startDate || !endDate) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
                 reason: reason || null,
+                attachmentUrl: attachmentUrl || null,
             }
         });
 
