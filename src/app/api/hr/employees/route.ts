@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { requirePermission } from "@/lib/rbac";
+import { revalidatePath } from "next/cache";
 
 export async function GET() {
     try {
@@ -26,15 +27,16 @@ export async function POST(request: Request) {
             employeeType, position, wageRate, status, bankAccount, image, departmentId,
             idCardNumber, dob, gender, address, emergencyContact, emergencyRelation,
             mbti, enneagram, tshirtSize, foodAllergies,
-            startDate, probationEndDate, managerId
+            startDate, probationEndDate, managerId, phoneNumber
         } = body;
 
-        if (!name || !email || !password) {
+        if (!name || !email) {
             return NextResponse.json({ error: "Missing required user fields" }, { status: 400 });
         }
 
-        // 1. Create User
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // 1. Create User (Default password to 123456 if none provided)
+        const passwordToHash = password || "123456";
+        const hashedPassword = await bcrypt.hash(passwordToHash, 10);
 
         // 2. Wrap in transaction
         const employee = await prisma.$transaction(async (tx) => {
@@ -61,6 +63,7 @@ export async function POST(request: Request) {
                     dob: dob ? new Date(dob) : null,
                     gender: gender || null,
                     address: address || null,
+                    phoneNumber: phoneNumber || null,
                     emergencyContact: emergencyContact || null,
                     emergencyRelation: emergencyRelation || null,
                     mbti: mbti || null,
@@ -89,6 +92,9 @@ export async function POST(request: Request) {
 
             return emp;
         });
+
+        revalidatePath("/hr");
+        revalidatePath("/hr/employees");
 
         return NextResponse.json(employee, { status: 201 });
     } catch (error: any) {

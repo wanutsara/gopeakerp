@@ -33,11 +33,14 @@ const navigation = [
         name: "ระบบบุคคล (HR)",
         icon: "👥",
         children: [
+            { name: "ประกาศบอร์ดข่าว", href: "/hr/announcements" },
             { name: "บัญชาการลงเวลา (The Pulse)", href: "/hr/attendance" },
             { name: "รายชื่อพนักงาน", href: "/hr" },
             { name: "แผนก (Departments)", href: "/hr/departments" },
             { name: "เงินเดือน (Payroll)", href: "/hr/payroll" },
             { name: "วันลา (Leaves)", href: "/hr/leave" },
+            { name: "ล่วงเวลา (OT)", href: "/hr/overtime" },
+            { name: "เบิกจ่าย (Expenses)", href: "/hr/expenses" },
             { name: "ตั้งค่าระบบ (Settings)", href: "/hr/settings" },
         ]
     },

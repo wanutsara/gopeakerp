@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -18,6 +19,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                 images,
             }
         });
+
+        revalidatePath("/oms/products");
 
         return NextResponse.json(updatedProduct);
     } catch (error: any) {
@@ -50,6 +53,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         await prisma.product.delete({
             where: { id }
         });
+
+        revalidatePath("/oms/products");
 
         return NextResponse.json({ message: "Product deleted successfully" });
     } catch (error) {

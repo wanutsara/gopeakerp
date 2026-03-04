@@ -12,8 +12,10 @@ import {
     CheckCircleIcon,
     XCircleIcon,
     ArrowTrendingUpIcon,
-    ArrowTrendingDownIcon
+    ArrowTrendingDownIcon,
+    InboxIcon
 } from "@heroicons/react/24/outline";
+import Link from "next/link";
 import {
     BarChart,
     Bar,
@@ -100,9 +102,18 @@ export default function AttendanceDashboardPage() {
                     <h1 className="text-2xl font-bold text-gray-900">ศูนย์บัญชาการข้อมูลการลงเวลา (The Pulse)</h1>
                     <p className="text-gray-500 mt-1">ภาพรวมการเช็คอินแบบ Real-time ประจำวันที่ {todayDate}</p>
                 </div>
-                <div className="mt-4 md:mt-0 flex items-center space-x-3 bg-indigo-50 px-4 py-2 rounded-xl text-indigo-700 font-medium">
-                    <ClockIcon className="w-5 h-5" />
-                    <span>Avg Arrival: {averageArrivalTime} น.</span>
+                <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-end md:items-center space-y-3 md:space-y-0 md:space-x-3">
+                    <div className="flex items-center space-x-3 bg-indigo-50 px-4 py-2 rounded-xl text-indigo-700 font-medium">
+                        <ClockIcon className="w-5 h-5" />
+                        <span>Avg Arrival: {averageArrivalTime} น.</span>
+                    </div>
+                    <Link
+                        href="/hr/attendance/requests"
+                        className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-colors shadow-sm font-medium"
+                    >
+                        <InboxIcon className="w-5 h-5" />
+                        <span>กล่องคำขอปรับเวลา</span>
+                    </Link>
                 </div>
             </div>
 

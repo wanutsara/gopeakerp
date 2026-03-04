@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { PlusIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from "@heroicons/react/24/outline";
 
 // Fetcher for SWR
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -14,8 +14,12 @@ export default function LeavePage() {
     const [type, setType] = useState("PERSONAL");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [startTime, setStartTime] = useState("09:00");
+    const [endTime, setEndTime] = useState("18:00");
+    const [requestedHours, setRequestedHours] = useState(8);
     const [reason, setReason] = useState("");
     const [attachmentUrl, setAttachmentUrl] = useState("");
+    const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
     const { data: leaves, error, isLoading, mutate } = useSWR("/api/hr/leave", fetcher);
 
@@ -23,18 +27,38 @@ export default function LeavePage() {
     const handleCreateLeave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            let uploadedUrl = attachmentUrl;
+
+            if (type === 'SICK' && attachmentFile) {
+                const formData = new FormData();
+                formData.append("file", attachmentFile);
+                const uploadRes = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData
+                });
+                if (!uploadRes.ok) throw new Error("อัพโหลดไฟล์ใบรับรองแพทย์ไม่สำเร็จ");
+                const uploadData = await uploadRes.json();
+                uploadedUrl = uploadData.url;
+            } else if (type === 'SICK' && !attachmentFile) {
+                alert("กรุณาแนบใบรับรองแพทย์");
+                return;
+            }
+
             const res = await fetch("/api/hr/leave", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ type, startDate, endDate, reason, attachmentUrl: type === 'SICK' ? attachmentUrl : undefined }),
+                body: JSON.stringify({ type, startDate, endDate, startTime, endTime, requestedHours, reason, attachmentUrl: type === 'SICK' ? uploadedUrl : undefined }),
             });
             if (res.ok) {
                 setIsCreateModalOpen(false);
+                setAttachmentFile(null);
+                setAttachmentUrl("");
                 mutate(); // Refresh leaves list
             } else {
                 alert("Failed to create leave request");
             }
-        } catch (error) {
+        } catch (error: any) {
+            alert(error.message || "เกิดข้อผิดพลาด");
             console.error(error);
         }
     };
@@ -107,7 +131,16 @@ export default function LeavePage() {
                                     leaves.map((leave: any) => (
                                         <tr key={leave.id}>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}
+                                                <div className="font-semibold">{new Date(leave.startDate).toLocaleDateString('th-TH')} - {new Date(leave.endDate).toLocaleDateString('th-TH')}</div>
+                                                {leave.requestedHours ? (
+                                                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                                        <ClockIcon className="w-3 h-3" /> {leave.startTime} - {leave.endTime} <span className="font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded ml-1">({leave.requestedHours} ชม.)</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                                        <ClockIcon className="w-3 h-3" /> ลาเต็มวัน
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {leave.type}
@@ -214,6 +247,39 @@ export default function LeavePage() {
                                     />
                                 </div>
                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">เวลาเริ่ม</label>
+                                    <input
+                                        type="time"
+                                        value={startTime}
+                                        onChange={(e) => setStartTime(e.target.value)}
+                                        className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">เวลาสิ้นสุด</label>
+                                    <input
+                                        type="time"
+                                        value={endTime}
+                                        onChange={(e) => setEndTime(e.target.value)}
+                                        className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">ชม. ขอลา</label>
+                                <input
+                                    type="number"
+                                    step="0.5"
+                                    value={requestedHours}
+                                    onChange={(e) => setRequestedHours(parseFloat(e.target.value))}
+                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
+                                    required
+                                />
+                            </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">เหตุผลการลา</label>
                                 <textarea
@@ -226,14 +292,27 @@ export default function LeavePage() {
                             </div>
                             {type === 'SICK' && (
                                 <div className="animate-in fade-in zoom-in duration-200">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">แนบใบรับรองแพทย์ (URL รูปภาพหรือ PDF)</label>
-                                    <input
-                                        type="url"
-                                        value={attachmentUrl}
-                                        onChange={(e) => setAttachmentUrl(e.target.value)}
-                                        className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
-                                        placeholder="https://..."
-                                    />
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">แนบใบรับรองแพทย์ <span className="text-red-500">*</span></label>
+                                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition-colors">
+                                        <input
+                                            type="file"
+                                            required
+                                            accept="image/*,application/pdf"
+                                            onChange={e => setAttachmentFile(e.target.files?.[0] || null)}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        />
+                                        {attachmentFile ? (
+                                            <div className="text-sm font-medium text-blue-600 flex flex-col items-center gap-1">
+                                                <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                {attachmentFile.name}
+                                            </div>
+                                        ) : (
+                                            <div className="text-sm text-gray-500 flex flex-col items-center gap-1">
+                                                <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                                                คลิกเพื่อเลือกไฟล์เอกสาร (ภาพ/PDF)
+                                            </div>
+                                        )}
+                                    </div>
                                     <p className="mt-1 text-xs text-gray-500">กรณีลาป่วยเกิน 3 วัน จำเป็นต้องแนบใบรับรองแพทย์</p>
                                 </div>
                             )}

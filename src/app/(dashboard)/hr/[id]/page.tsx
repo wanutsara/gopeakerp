@@ -20,16 +20,17 @@ export default function EditEmployeePage() {
 
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);
     const [docForm, setDocForm] = useState({ type: 'PAYSLIP', title: '', fileUrl: '' });
+    const [docFile, setDocFile] = useState<File | null>(null);
 
     const [isLeaveQuotaModalOpen, setIsLeaveQuotaModalOpen] = useState(false);
     const [leaveQuotaForm, setLeaveQuotaForm] = useState({ year: new Date().getFullYear(), sickLeaveTotal: 30, personalLeaveTotal: 6, vacationTotal: 6 });
 
     const [formData, setFormData] = useState({
         // Auth / Basics
-        name: "", email: "", password: "", role: "", userRoleId: "",
+        name: "", email: "", password: "", role: "", userRoleId: "", image: "",
 
         // Personal Info
-        idCardNumber: "", dob: "", gender: "", address: "", emergencyContact: "", emergencyRelation: "",
+        idCardNumber: "", dob: "", gender: "", address: "", emergencyContact: "", emergencyRelation: "", phoneNumber: "",
 
         // Work Status
         employeeType: "", position: "", wageRate: "", status: "", bankAccount: "",
@@ -61,11 +62,13 @@ export default function EditEmployeePage() {
                     password: "", // Keep empty
                     role: emp.user?.role || "STAFF",
                     userRoleId: emp.user?.userRoleId || "",
+                    image: emp.user?.image || "",
 
                     idCardNumber: emp.idCardNumber || "",
                     dob: emp.dob ? emp.dob.split('T')[0] : "",
                     gender: emp.gender || "",
                     address: emp.address || "",
+                    phoneNumber: emp.phoneNumber || "",
                     emergencyContact: emp.emergencyContact || "",
                     emergencyRelation: emp.emergencyRelation || "",
 
@@ -176,17 +179,36 @@ export default function EditEmployeePage() {
     const handleUploadDoc = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            let uploadedUrl = docForm.fileUrl;
+            if (docFile) {
+                const formData = new FormData();
+                formData.append("file", docFile);
+                const uploadRes = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData
+                });
+                if (!uploadRes.ok) throw new Error("File upload failed");
+                const uploadData = await uploadRes.json();
+                uploadedUrl = uploadData.url;
+            } else {
+                alert("กรุณาเลือกไฟล์แนบ");
+                return;
+            }
+
             const res = await fetch("/api/hr/documents", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     employeeId: params.id,
-                    ...docForm
+                    type: docForm.type,
+                    title: docForm.title,
+                    fileUrl: uploadedUrl
                 })
             });
             if (res.ok) {
                 setIsDocModalOpen(false);
                 setDocForm({ type: 'PAYSLIP', title: '', fileUrl: '' });
+                setDocFile(null);
                 const updatedRes = await fetch(`/api/hr/employees/${params.id}`);
                 const updatedEmp = await updatedRes.json();
                 setEmployeeData(updatedEmp);
@@ -195,6 +217,7 @@ export default function EditEmployeePage() {
             }
         } catch (err) {
             console.error(err);
+            alert("Error in file upload");
         }
     };
 
@@ -255,6 +278,48 @@ export default function EditEmployeePage() {
                     {/* TAB 1: PERSONAL INFO */}
                     {activeTab === 'INFO' && (
                         <div className="space-y-8 animate-in fade-in duration-300">
+
+                            {/* รูปประจำตัว */}
+                            <section className="flex flex-col items-center pb-8 border-b border-gray-100">
+                                <div className="relative group cursor-pointer" onClick={() => {
+                                    const fileInput = document.getElementById('profile-image-upload');
+                                    if (fileInput) fileInput.click();
+                                }}>
+                                    {formData.image ? (
+                                        <img src={formData.image} alt="Profile" className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg" />
+                                    ) : (
+                                        <div className="w-32 h-32 rounded-full bg-gray-50 flex items-center justify-center border-4 border-white shadow-lg text-gray-400 group-hover:bg-gray-100 transition">
+                                            <span className="text-sm">อัปโหลดรูป</span>
+                                        </div>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <span className="text-white text-xs font-bold">เปลี่ยนรูป</span>
+                                    </div>
+                                </div>
+                                <h3 className="mt-4 text-sm font-semibold text-gray-900">รูปประจำตัว (Profile Picture)</h3>
+                                <p className="mt-1 text-xs text-gray-500">คลิกที่รูปภาพเพื่ออัปโหลด (ขนาดไม่เกิน 2MB)</p>
+                                <input
+                                    id="profile-image-upload"
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            if (file.size > 2 * 1024 * 1024) {
+                                                alert("กรุณาอัปโหลดรูปภาพขนาดไม่เกิน 2MB");
+                                                return;
+                                            }
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => {
+                                                setFormData({ ...formData, image: reader.result as string });
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }}
+                                />
+                            </section>
+
                             <section>
                                 <h3 className="text-sm font-bold tracking-wider text-gray-400 uppercase mb-4">ข้อมูลบัญชีระบบ</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -297,6 +362,10 @@ export default function EditEmployeePage() {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">เลขบัตรประชาชน</label>
                                         <input type="text" maxLength={13} name="idCardNumber" value={formData.idCardNumber} onChange={handleChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition" placeholder="เลข 13 หลัก" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">เบอร์โทรศัพท์</label>
+                                        <input type="text" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition" placeholder="08x-xxx-xxxx" />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">วันเดือนปีเกิด</label>
@@ -688,16 +757,26 @@ export default function EditEmployeePage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">ไฟล์แนบ (URL)</label>
-                                <input
-                                    type="url"
-                                    value={docForm.fileUrl}
-                                    onChange={(e) => setDocForm(prev => ({ ...prev, fileUrl: e.target.value }))}
-                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border"
-                                    required
-                                    placeholder="https://..."
-                                />
-                                <p className="mt-1 flex items-center text-xs text-gray-500">ใส่ลิงก์ Google Drive หรือรูปภาพที่อัปโหลดไว้</p>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">ไฟล์แนบ <span className="text-red-500">*</span></label>
+                                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition-colors">
+                                    <input
+                                        type="file"
+                                        required
+                                        onChange={e => setDocFile(e.target.files?.[0] || null)}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    {docFile ? (
+                                        <div className="text-sm font-medium text-blue-600 flex flex-col items-center gap-1">
+                                            <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            {docFile.name}
+                                        </div>
+                                    ) : (
+                                        <div className="text-sm text-gray-500 flex flex-col items-center gap-1">
+                                            <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                                            คลิกเพื่อเลือกไฟล์เอกสาร
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div className="pt-4 flex justify-end gap-3">
                                 <button

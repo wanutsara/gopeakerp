@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -32,6 +33,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 platformSku: String(platformSku).trim()
             }
         });
+
+        revalidatePath("/oms/products");
 
         return NextResponse.json(newMapping, { status: 201 });
     } catch (error: any) {

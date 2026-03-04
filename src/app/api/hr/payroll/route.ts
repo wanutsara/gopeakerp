@@ -81,13 +81,36 @@ export async function POST(req: NextRequest) {
                     socialSecurityDeduction = Math.floor(Math.min(baseSalary * 0.05, 750));
                 }
 
-                const netSalary = baseSalary - socialSecurityDeduction;
+                // Calculate actual OT Amount from approved OvertimeRequests matching this month
+                const startDate = new Date(`${month}-01`);
+                const endDate = new Date(startDate);
+                endDate.setMonth(endDate.getMonth() + 1);
+
+                const otRequests = await prisma.overtimeRequest.findMany({
+                    where: {
+                        employeeId: emp.id,
+                        status: "APPROVED",
+                        date: {
+                            gte: startDate,
+                            lt: endDate
+                        }
+                    }
+                });
+
+                const hourlyWage = emp.employeeType === 'MONTHLY' ? (emp.wageRate / 30 / 8) : (emp.wageRate / 8);
+                let otAmount = 0;
+                for (const ot of otRequests) {
+                    otAmount += (ot.calculatedHours * ot.multiplier * hourlyWage);
+                }
+                otAmount = Math.round(otAmount); // Round to nearest integer for THB
+
+                const netSalary = (baseSalary + otAmount) - socialSecurityDeduction;
 
                 newPayrollsToCreate.push({
                     employeeId: emp.id,
                     month,
                     baseSalary,
-                    otAmount: 0,
+                    otAmount,
                     otherIncome: 0,
                     bonus: 0,
                     socialSecurityDeduction,

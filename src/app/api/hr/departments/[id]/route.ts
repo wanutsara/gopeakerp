@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -27,6 +28,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
             }
         });
 
+        revalidatePath("/hr");
+        revalidatePath("/hr/departments");
+
         return NextResponse.json(department);
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
@@ -44,6 +48,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         await prisma.department.delete({
             where: { id }
         });
+
+        revalidatePath("/hr");
+        revalidatePath("/hr/departments");
 
         return NextResponse.json({ success: true });
     } catch (err: any) {

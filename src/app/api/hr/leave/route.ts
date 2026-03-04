@@ -64,9 +64,9 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { type, startDate, endDate, reason, attachmentUrl } = body;
+        const { type, startDate, endDate, startTime, endTime, requestedHours, reason, attachmentUrl } = body;
 
-        if (!type || !startDate || !endDate) {
+        if (!type || !startDate || !endDate || requestedHours === undefined) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
@@ -87,6 +87,9 @@ export async function POST(req: NextRequest) {
                 type: type as LeaveType,
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
+                startTime,
+                endTime,
+                requestedHours: parseFloat(requestedHours),
                 reason: reason || null,
                 attachmentUrl: attachmentUrl || null,
             }

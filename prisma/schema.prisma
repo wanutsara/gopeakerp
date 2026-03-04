@@ -25,8 +25,14 @@ model User {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  employee     Employee?
-  activityLogs ActivityLog[]
+  employee      Employee?
+  activityLogs  ActivityLog[]
+  notifications Notification[]
+  announcements Announcement[]
+  reviewedTimeRequests TimeAdjustmentRequest[]
+  
+  sentKudos            Kudos[] @relation("SentKudos")
+  announcementInteractions AnnouncementInteraction[]
 }
 
 model UserRole {
@@ -73,8 +79,9 @@ model Department {
   workStart String?
   workEnd   String?
 
-  employees Employee[]
-  expenses  ExpenseRequest[]
+  employees     Employee[]
+  expenses      ExpenseRequest[]
+  announcements Announcement[]
 }
 
 model Employee {
@@ -87,6 +94,7 @@ model Employee {
 
   // Core Profile
   image             String? // Store URL or path for employee avatar picture
+  phoneNumber       String?
   idCardNumber      String?
   dob               DateTime? @db.Date
   gender            String?
@@ -127,7 +135,13 @@ model Employee {
   documents        EmployeeDocument[]
   approvals        ExpenseRequest[] @relation("ExpenseApprover")
   requests         ExpenseRequest[] @relation("ExpenseRequestor")
-  timeLogs      TimeLog[]
+  timeLogs         TimeLog[]
+  timeAdjustments  TimeAdjustmentRequest[]
+  
+  moods            EmployeeMood[]
+  receivedKudos    Kudos[] @relation("ReceivedKudos")
+  goals            EmployeeGoal[]
+  overtimeRequests OvertimeRequest[]
 }
 
 enum EmployeeType {
@@ -160,10 +174,19 @@ model LeaveRequest {
   type          LeaveType
   startDate     DateTime       @db.Date
   endDate       DateTime       @db.Date
+  
+  // Phase 15: Hourly Leave Extensions
+  startTime     String?        // e.g. "09:00"
+  endTime       String?        // e.g. "12:00"
+  requestedHours Float         @default(8)   // Used to deduct from `LeaveBalance` precisely
+
   reason        String?
-  attachmentUrl String? // For medical certificates
+  attachmentUrl String?        // For medical certificates
   status        ApprovalStatus @default(PENDING)
-  approvedBy    String? // Store user ID who approved
+  approvedBy    String?        // Store user ID who approved
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 enum LeaveType {
@@ -220,6 +243,28 @@ model TimeLog {
   updatedAt    DateTime  @updatedAt
 
   @@unique([employeeId, date])
+}
+
+// ----------------------------------------------------------------------
+// Overtime Management (Phase 15)
+// ----------------------------------------------------------------------
+
+model OvertimeRequest {
+  id              String   @id @default(cuid())
+  employeeId      String
+  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  date            DateTime @db.Date
+  startTime       String   // e.g. "18:00"
+  endTime         String   // e.g. "21:00"
+  calculatedHours Float
+  multiplier      Float    @default(1.5) // Standard 1.5x OT Rate
+  reason          String?
+  
+  status          ApprovalStatus @default(PENDING)
+  approvedBy      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Payroll {
@@ -597,4 +642,139 @@ model ActivityLog {
   details  String?
 
   timestamp DateTime @default(now())
+}
+
+// ----------------------------------------------------------------------
+// Noticenter & Broadcast Module (Phase 12)
+// ----------------------------------------------------------------------
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String   // The User who receives this notification
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title       String
+  message     String
+  type        String   @default("SYSTEM") // e.g. "ATTENDANCE_REQUEST", "ANNOUNCEMENT", "PAYROLL"
+  isRead      Boolean  @default(false)
+  referenceId String?  // Optional ID for deep linking (e.g. ID of the specific Request)
+  
+  createdAt   DateTime @default(now())
+}
+
+model TimeAdjustmentRequest {
+  id                String   @id @default(cuid())
+  employeeId        String
+  employee          Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  date              DateTime @db.Date // The date they want to edit
+  requestedCheckIn  DateTime?
+  requestedCheckOut DateTime?
+  reason            String
+  
+  status            ApprovalStatus @default(PENDING) // PENDING, APPROVED, REJECTED
+  
+  reviewerId        String?  // The HR/Manager who reviewed it
+  reviewer          User?    @relation(fields: [reviewerId], references: [id])
+  reviewedAt        DateTime?
+  adminComment      String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Announcement {
+  id                 String   @id @default(cuid())
+  title              String
+  content            String
+  
+  authorId           String   // The User who posted it
+  author             User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  isGlobal           Boolean  @default(true) // If true, sent to everyone
+  targetDepartmentId String?  // If false, sent to specific department
+  department         Department? @relation(fields: [targetDepartmentId], references: [id], onDelete: SetNull)
+  
+  isActive           Boolean  @default(true)
+  
+  // Phase 13 Engagement Additions
+  type               String?   @default("NEWS") // "NEWS", "EVENT", "POLL"
+  eventDate          DateTime? // If type="EVENT", when does this happen?
+  pollOptions        Json?     // If type="POLL", ["Pizza", "KFC"]
+  interactions       AnnouncementInteraction[]
+  
+  // Phase 14: Lifecycle Management
+  publishAt          DateTime? // Optional start date for visibility
+  expireAt           DateTime? // Optional end date for visibility
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// ----------------------------------------------------------------------
+// Employee Engagement Module (Phase 13)
+// ----------------------------------------------------------------------
+
+model EmployeeMood {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date       DateTime @db.Date 
+  mood       MoodType 
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@unique([employeeId, date]) 
+}
+
+enum MoodType {
+  GREAT
+  GOOD
+  OKAY
+  BAD
+  TERRIBLE
+}
+
+model Kudos {
+  id         String   @id @default(cuid())
+  senderId   String
+  sender     User     @relation("SentKudos", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   Employee @relation("ReceivedKudos", fields: [receiverId], references: [id], onDelete: Cascade)
+  badgeType  String   @default("THANK_YOU") 
+  message    String
+  createdAt  DateTime @default(now())
+}
+
+model EmployeeGoal {
+  id           String   @id @default(cuid())
+  employeeId   String
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  currentValue Float    @default(0)
+  targetValue  Float
+  unit         String   @default("%")
+  deadline     DateTime? @db.Date
+  status       GoalStatus @default(IN_PROGRESS)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+enum GoalStatus {
+  IN_PROGRESS
+  ACHIEVED
+  MISSED
+}
+
+model AnnouncementInteraction {
+  id             String       @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action         String       // "RSVP_YES", "VOTE_1", "LIKE"
+  createdAt      DateTime     @default(now())
+
+  @@unique([announcementId, userId, action])
 }

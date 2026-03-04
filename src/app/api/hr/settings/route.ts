@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export async function GET() {
     try {
@@ -52,6 +53,9 @@ export async function PUT(request: Request) {
                 details: `Updated global attendance settings`,
             }
         });
+
+        revalidatePath("/hr");
+        revalidatePath("/hr/settings");
 
         return NextResponse.json(updated);
     } catch (error) {

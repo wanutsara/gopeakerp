@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export async function GET(request: Request) {
     try {
@@ -29,6 +30,8 @@ export async function POST(request: Request) {
                 date: date ? new Date(date) : new Date()
             }
         });
+
+        revalidatePath("/finance");
 
         return NextResponse.json(newTx, { status: 201 });
     } catch (error) {

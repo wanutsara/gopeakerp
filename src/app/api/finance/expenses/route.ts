@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export async function GET(request: Request) {
     try {
@@ -90,6 +91,9 @@ export async function POST(request: Request) {
                 requestor: { select: { user: { select: { name: true } } } }
             }
         });
+
+        revalidatePath("/finance");
+        revalidatePath("/finance/expenses");
 
         return NextResponse.json(newRequest, { status: 201 });
     } catch (error) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -67,6 +68,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
                 return updatedRequest;
             });
+
+            revalidatePath("/finance");
+            revalidatePath("/finance/expenses");
+
             return NextResponse.json(result);
         }
 
@@ -78,6 +83,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                 approverId: approver?.id
             }
         });
+
+        revalidatePath("/finance/expenses");
 
         return NextResponse.json(updated);
     } catch (error) {
@@ -113,6 +120,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         await prisma.expenseRequest.delete({
             where: { id }
         });
+
+        revalidatePath("/finance/expenses");
 
         return NextResponse.json({ success: true });
     } catch (error) {

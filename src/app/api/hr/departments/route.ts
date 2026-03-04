@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export async function GET(req: NextRequest) {
     try {
@@ -46,6 +47,9 @@ export async function POST(req: NextRequest) {
                 workEnd: workEnd || null
             }
         });
+
+        revalidatePath("/hr");
+        revalidatePath("/hr/departments");
 
         return NextResponse.json(department, { status: 201 });
     } catch (err: any) {

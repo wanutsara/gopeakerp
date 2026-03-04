@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import LogoutButton from "./LogoutButton";
+import Noticenter from "@/components/Noticenter";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
     const session = await getServerSession(authOptions);
@@ -17,7 +18,10 @@ export default async function PortalLayout({ children }: { children: React.React
                         </div>
                         <h1 className="font-bold text-gray-900 tracking-tight">ระบบบริการพนักงาน</h1>
                     </div>
-                    {session && <LogoutButton />}
+                    <div className="flex items-center gap-2">
+                        {session && <Noticenter />}
+                        {session && <LogoutButton />}
+                    </div>
                 </div>
             </header>
 

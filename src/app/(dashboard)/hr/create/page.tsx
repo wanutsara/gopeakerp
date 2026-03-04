@@ -23,7 +23,8 @@ export default function CreateEmployeePage() {
         bankAccount: "",
         status: "ACTIVE",
         departmentId: "",
-        image: ""
+        image: "",
+        phoneNumber: ""
     });
 
     const { data: departments } = useSWR("/api/hr/departments", fetcher);
@@ -134,8 +135,12 @@ export default function CreateEmployeePage() {
                                 <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition" placeholder="sommai@tamaya.com" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">รหัสผ่าน</label>
-                                <input required type="password" name="password" value={formData.password} onChange={handleChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition" placeholder="••••••••" />
+                                <label className="block text-sm font-medium text-gray-700 mb-2">เบอร์โทรศัพท์</label>
+                                <input type="text" name="phoneNumber" value={formData.phoneNumber || ""} onChange={handleChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition" placeholder="08x-xxx-xxxx" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">รหัสผ่าน <span className="text-xs font-normal text-gray-500">(ค่าเริ่มต้น 123456)</span></label>
+                                <input disabled type="password" value="123456" className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 text-gray-500 rounded-xl cursor-not-allowed" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">สิทธิ์การใช้งานระบบ (Role)</label>

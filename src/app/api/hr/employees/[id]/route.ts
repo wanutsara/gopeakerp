@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { revalidatePath } from "next/cache";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -34,7 +35,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             name, role, userRoleId, password, employeeType, position, wageRate, status, bankAccount, departmentId, image,
             idCardNumber, dob, gender, address, emergencyContact, emergencyRelation,
             mbti, enneagram, tshirtSize, foodAllergies,
-            startDate, probationEndDate, managerId,
+            startDate, probationEndDate, managerId, phoneNumber,
             customLat, customLng, customRadius, customWorkStart, customWorkEnd
         } = body;
 
@@ -54,6 +55,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                     ...(dob !== undefined && { dob: dob ? new Date(dob) : null }),
                     ...(gender !== undefined && { gender }),
                     ...(address !== undefined && { address }),
+                    ...(phoneNumber !== undefined && { phoneNumber }),
                     ...(emergencyContact !== undefined && { emergencyContact }),
                     ...(emergencyRelation !== undefined && { emergencyRelation }),
                     ...(mbti !== undefined && { mbti }),
@@ -102,6 +104,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             return emp;
         });
 
+        revalidatePath("/hr");
+        revalidatePath("/hr/employees");
+
         return NextResponse.json(updatedEmployee);
     } catch (error) {
         console.error("Error updating employee:", error);
@@ -133,6 +138,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
                 details: `Deleted employee record`,
             }
         });
+
+        revalidatePath("/hr");
+        revalidatePath("/hr/employees");
 
         return NextResponse.json({ success: true });
     } catch (error) {
