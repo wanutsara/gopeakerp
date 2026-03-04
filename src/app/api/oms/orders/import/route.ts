@@ -35,7 +35,16 @@ export async function POST(request: Request) {
                 continue;
             }
 
-            // Deduplication Check
+            const resolveStatus = (s: string) => {
+                const upper = (s || "").toUpperCase();
+                if (upper.includes("CANCEL")) return "CANCELLED";
+                if (upper.includes("COMPLETED") || upper.includes("DELIVERED") || upper.includes("SUCCESS")) return "COMPLETED";
+                return "PENDING";
+            };
+
+            const resolvedStatus = resolveStatus(status);
+
+            // Deduplication & State Update Check
             const existingOrder = await prisma.order.findUnique({
                 where: {
                     platformOrderId_channel: {
@@ -46,26 +55,59 @@ export async function POST(request: Request) {
             });
 
             if (existingOrder) {
-                skippedCount++;
+                // Ghost Fulfillment: If order arrived as PENDING yesterday, but today's CSV says COMPLETED
+                if (existingOrder.status !== "COMPLETED" && resolvedStatus === "COMPLETED") {
+                    try {
+                        await prisma.$transaction(async (tx) => {
+                            // 1. Update order status
+                            await tx.order.update({
+                                where: { id: existingOrder.id },
+                                data: { status: "COMPLETED" }
+                            });
+
+                            // 2. Fetch its items and Deduct Stock
+                            const orderItems = await tx.orderItem.findMany({ where: { orderId: existingOrder.id } });
+                            for (const item of orderItems) {
+                                if (item.productId) {
+                                    const updatedProd = await tx.product.update({
+                                        where: { id: item.productId },
+                                        data: { stock: { decrement: item.quantity } }
+                                    });
+
+                                    // 3. Write Ledger
+                                    await tx.inventoryLog.create({
+                                        data: {
+                                            productId: item.productId,
+                                            type: "OUTBOUND",
+                                            quantityChanged: -item.quantity,
+                                            balanceAfter: updatedProd.stock,
+                                            reference: String(existingOrder.platformOrderId),
+                                            notes: `[Auto-Update] Order status changed to COMPLETED`,
+                                            createdBy: "SYSTEM_IMPORT"
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                        addedCount++; // Treat as processed/updated
+                    } catch (err) {
+                        console.error("Failed to update order to COMPLETED:", platformOrderId, err);
+                        errorCount++;
+                    }
+                } else {
+                    skippedCount++;
+                }
                 continue;
             }
 
             try {
-                // Determine Order Status based on generic Mapping (Assuming frontend sends generic statuses or raw ones we map later. Let's assume frontend maps it)
-                const resolveStatus = (s: string) => {
-                    const upper = (s || "").toUpperCase();
-                    if (upper.includes("CANCEL")) return "CANCELLED";
-                    if (upper.includes("COMPLETED") || upper.includes("DELIVERED") || upper.includes("SUCCESS")) return "COMPLETED";
-                    return "PENDING";
-                };
-
-                // Create Order and Items in a transaction
+                // Create New Order and Items in a transaction
                 await prisma.$transaction(async (tx) => {
                     const newOrder = await tx.order.create({
                         data: {
                             platformOrderId: String(platformOrderId),
                             channel,
-                            status: resolveStatus(status) as any,
+                            status: resolvedStatus as any,
                             subtotal: parseFloat(subtotal) || 0,
                             shippingFee: parseFloat(shippingFee) || 0,
                             platformFee: parseFloat(platformFee) || 0,
@@ -80,23 +122,44 @@ export async function POST(request: Request) {
                         for (const item of items) {
                             const pSku = String(item.platformSku).trim();
                             const mappedProductId = skuToProductId[pSku] || null;
+                            const qty = parseInt(item.quantity) || 1;
 
                             await tx.orderItem.create({
                                 data: {
                                     orderId: newOrder.id,
                                     productId: mappedProductId,
                                     productName: item.productName || pSku || "Unknown Product",
-                                    quantity: parseInt(item.quantity) || 1,
+                                    quantity: qty,
                                     price: parseFloat(item.price) || 0
                                 }
                             });
+
+                            // --- PHASE 9: AUTO-DEDUCTION (GHOST FULFILLMENT) FOR NEW ORDERS ---
+                            if (mappedProductId && resolvedStatus === "COMPLETED") {
+                                const updatedProduct = await tx.product.update({
+                                    where: { id: mappedProductId },
+                                    data: { stock: { decrement: qty } }
+                                });
+
+                                await tx.inventoryLog.create({
+                                    data: {
+                                        productId: mappedProductId,
+                                        type: "OUTBOUND",
+                                        quantityChanged: -qty,
+                                        balanceAfter: updatedProduct.stock,
+                                        reference: String(platformOrderId),
+                                        notes: `[Auto-Deduction] New ${channel} Order`,
+                                        createdBy: "SYSTEM_IMPORT"
+                                    }
+                                });
+                            }
                         }
                     }
                 });
 
                 addedCount++;
             } catch (err) {
-                console.error("Failed to process order:", platformOrderId, err);
+                console.error("Failed to process new order:", platformOrderId, err);
                 errorCount++;
             }
         }

@@ -306,6 +306,7 @@ model Product {
 
   orderItems      OrderItem[]
   channelProducts ChannelProduct[]
+  inventoryLogs   InventoryLog[]
 }
 
 model ChannelProduct {
@@ -360,6 +361,35 @@ model PreorderItem {
   costPerUnitRMB Float?
   customerName   String? // กรณีไม่ได้ลิงก์กับ CRM ตรง
   notes          String?
+}
+
+// ----------------------------------------------------------------------
+// Order Management Module (OMS) & Inventory Ledger
+// ----------------------------------------------------------------------
+enum MovementCategory {
+  INBOUND       // รับของเข้าคลัง (Supplier/Restock)
+  OUTBOUND      // ตัดยอดขายอัตโนมัติ (Sales/E-Commerce)
+  ADJUSTMENT    // อัปเดตยอดจริง (Cycle Count/Damage/Lost/Audit)
+  RETURN        // ลูกค้าตีของกลับ
+}
+
+model InventoryLog {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  type            MovementCategory 
+  quantityChanged Int      // Positive (+) or Negative (-)
+  balanceAfter    Int      // The snapshot of stock after this movement
+  
+  reference       String?  // PlatformOrderId, PO ID, etc.
+  notes           String?  // User manual notes or systemic auto-notes
+  
+  createdBy       String?  // Which employee/system triggered this log?
+  createdAt       DateTime @default(now())
+
+  @@index([productId])
+  @@index([type])
 }
 
 // ----------------------------------------------------------------------

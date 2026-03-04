@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { PlusIcon, PencilSquareIcon, TrashIcon, TagIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, PencilSquareIcon, TrashIcon, TagIcon, CubeIcon } from "@heroicons/react/24/outline";
 import ProductModal from "./ProductModal";
+import InventoryModal from "./InventoryModal";
 
 const fetcher = async (url: string) => {
     const res = await fetch(url);
@@ -17,6 +18,9 @@ export default function ProductsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
+    const [isInvModalOpen, setIsInvModalOpen] = useState(false);
+    const [selectedInvProduct, setSelectedInvProduct] = useState<any>(null);
+
     const handleAdd = () => {
         setSelectedProduct(null);
         setIsModalOpen(true);
@@ -25,6 +29,11 @@ export default function ProductsPage() {
     const handleEdit = (product: any) => {
         setSelectedProduct(product);
         setIsModalOpen(true);
+    };
+
+    const handleInventory = (product: any) => {
+        setSelectedInvProduct(product);
+        setIsInvModalOpen(true);
     };
 
     const handleDelete = async (id: string) => {
@@ -96,6 +105,11 @@ export default function ProductsPage() {
                                         <td className="px-6 py-4">
                                             <div className="font-medium text-gray-900">{product.name}</div>
                                             <div className="text-gray-500 text-xs mt-0.5">{product.sku || 'N/A'}</div>
+                                            <div className="mt-1 flex items-center gap-2">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    คงเหลือ: {product.stock || 0}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-right text-gray-600 font-medium">
                                             ฿{product.costPrice.toLocaleString()}
@@ -116,10 +130,17 @@ export default function ProductsPage() {
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                                            <button
+                                                onClick={() => handleInventory(product)}
+                                                className="p-2 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition"
+                                                title="จัดการสต๊อก (Receive / Count)"
+                                            >
+                                                <CubeIcon className="w-5 h-5" />
+                                            </button>
                                             <button
                                                 onClick={() => handleEdit(product)}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition ml-1"
                                                 title="แก้ไขและผูกช่องทาง"
                                             >
                                                 <PencilSquareIcon className="w-5 h-5" />
@@ -145,6 +166,15 @@ export default function ProductsPage() {
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
                     product={selectedProduct}
+                    onSaved={() => mutate()}
+                />
+            )}
+
+            {isInvModalOpen && (
+                <InventoryModal
+                    isOpen={isInvModalOpen}
+                    onClose={() => setIsInvModalOpen(false)}
+                    product={selectedInvProduct}
                     onSaved={() => mutate()}
                 />
             )}

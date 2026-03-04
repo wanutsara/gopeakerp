@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const id = (await params).id;
         const session = await getServerSession(authOptions);
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -28,7 +29,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         }
 
         const existing = await prisma.expenseRequest.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: { transaction: true }
         });
 
@@ -41,7 +42,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             // We use a transaction to ensure both records are updated atomically
             const result = await prisma.$transaction(async (tx) => {
                 const updatedRequest = await tx.expenseRequest.update({
-                    where: { id: params.id },
+                    where: { id },
                     data: {
                         status: "PAID",
                         approverId: approver?.id
@@ -71,7 +72,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
         // Normal status update (PENDING -> APPROVED or REJECTED)
         const updated = await prisma.expenseRequest.update({
-            where: { id: params.id },
+            where: { id },
             data: {
                 status,
                 approverId: approver?.id
@@ -85,13 +86,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const id = (await params).id;
         const session = await getServerSession(authOptions);
         if (!session || !session.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const existing = await prisma.expenseRequest.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: { requestor: true }
         });
 
@@ -109,7 +111,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         }
 
         await prisma.expenseRequest.delete({
-            where: { id: params.id }
+            where: { id }
         });
 
         return NextResponse.json({ success: true });
