@@ -11,6 +11,8 @@ const AVAILABLE_MODULES = [
     { key: "LEAVE", label: "ระบบวันลา (Leave Requests)" },
     { key: "CRM", label: "ลูกค้าสัมพันธ์ (CRM/Sales)" },
     { key: "INVENTORY", label: "คลังสินค้า (Inventory)" },
+    { key: "FINANCE", label: "การเงิน (Cash Flow)" },
+    { key: "PROCUREMENT", label: "จัดซื้อจัดจ้าง (PO)" },
     { key: "SETTINGS", label: "ตั้งค่าระบบ (Settings & Roles)" },
 ];
 

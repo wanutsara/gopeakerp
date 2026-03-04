@@ -65,7 +65,7 @@ export default function CashFlowDashboard() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-10"><DocumentTextIcon className="w-24 h-24 text-blue-600" /></div>
                     <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">ยอดขายรวมสุทธิ (Sales Revenue)</p>
@@ -94,17 +94,30 @@ export default function CashFlowDashboard() {
                     </p>
                     <p className="text-xs font-medium text-white/90 mt-2 bg-white/20 inline-block px-2 py-1 rounded relative z-10">บัญชีธนาคารบริษัท</p>
                 </div>
+
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                    <div className="relative z-10">
+                        <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">รายจ่ายรวม (Total Expenses)</p>
+                        <p className="text-4xl font-black text-gray-900 mt-2">
+                            <span className="text-2xl text-red-500 mr-1">฿</span>
+                            {(analytics?.totalExpenses || 0).toLocaleString()}
+                        </p>
+                        <p className="text-xs font-medium text-red-600 mt-2 bg-red-50 inline-block px-2 py-1 rounded">Outbound Cash (Payroll, PO, etc.)</p>
+                    </div>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* 1. ยอดขายแยกตามช่องทาง */}
-                <div className="lg:col-span-1 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                        <ChartPieIcon className="w-6 h-6 text-blue-500" />
-                        สัดส่วนยอดขาย (By Channel)
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left side: Sales Distribution (Revenue) */}
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-900 tracking-tight flex items-center gap-2">
+                        <ChartPieIcon className="w-5 h-5 text-indigo-500" />
+                        สัดส่วนรายได้ตามแพลตฟอร์ม (Revenue)
                     </h3>
                     {analytics.channelSales.length > 0 ? (
-                        <div className="relative h-64 w-full flex justify-center">
+                        <div className="relative h-64 w-full flex justify-center mt-4">
                             <Doughnut data={pieData} options={{ maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }} />
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-[-30px]">
                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total</span>

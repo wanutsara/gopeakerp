@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "./auth";
 
 type Action = "READ" | "WRITE" | "DELETE";
-type Module = "HR" | "PAYROLL" | "LEAVE" | "CRM" | "INVENTORY" | "SETTINGS";
+type Module = "HR" | "PAYROLL" | "LEAVE" | "CRM" | "INVENTORY" | "SETTINGS" | "FINANCE" | "PROCUREMENT";
 
 export async function hasPermission(module: Module, action: Action = "READ"): Promise<boolean> {
     const session = await getServerSession(authOptions);

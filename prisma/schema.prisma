@@ -74,6 +74,7 @@ model Department {
   workEnd   String?
 
   employees Employee[]
+  expenses  ExpenseRequest[]
 }
 
 model Employee {
@@ -123,7 +124,9 @@ model Employee {
   leaveRequests LeaveRequest[]
   leaveBalances LeaveBalance[]
   payrolls      Payroll[]
-  documents     EmployeeDocument[]
+  documents        EmployeeDocument[]
+  approvals        ExpenseRequest[] @relation("ExpenseApprover")
+  requests         ExpenseRequest[] @relation("ExpenseRequestor")
   timeLogs      TimeLog[]
 }
 
@@ -237,6 +240,8 @@ model Payroll {
 
   netSalary Float
   status    PaymentStatus @default(UNPAID)
+
+  transaction Transaction?
 }
 
 enum PaymentStatus {
@@ -426,20 +431,23 @@ model OrderItem {
 // Financial Module
 // ----------------------------------------------------------------------
 model Transaction {
-  id   String          @id @default(cuid())
-  type TransactionType
+  id               String               @id @default(uuid())
+  type             TransactionType
+  amount           Float                @default(0) // Platform currency
+  amountTHB        Float                @default(0) // Converted to THB
+  date             DateTime             @default(now())
+  category         String? // e.g., "AD_SPEND", "SALES_REVENUE", "PAYROLL", "PROCUREMENT"
+  description      String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @default(now()) @updatedAt
 
-  amount    Float
-  currency  Currency @default(THB)
-  amountTHB Float // แปลงเป็นบาทเสมอเพื่อง่ายต่อการสรุป
+  expenseRequestId String?              @unique
+  expenseRequest   ExpenseRequest?      @relation(fields: [expenseRequestId], references: [id])
 
-  category    TransactionCategory
-  subCategory String? // เช่น FB Ads, Shopee Ads, เงินเดือนพนักงาน
+  payrollId        String?              @unique
+  payroll          Payroll?             @relation(fields: [payrollId], references: [id])
 
-  description String?
-  date        DateTime @default(now())
-
-  reconciliations OrderReconciliation[]
+  reconciliations  OrderReconciliation[]
 }
 
 model OrderReconciliation {
@@ -458,6 +466,59 @@ model OrderReconciliation {
 enum TransactionType {
   INCOME
   EXPENSE
+  TRANSFER
+}
+
+// ---------------------------------------------------------------------------
+// Procurement & Expense Management (Phase 8)
+// ---------------------------------------------------------------------------
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+model ExpenseRequest {
+  id            String          @id @default(uuid())
+  title         String
+  description   String?
+  amount        Float           @default(0)
+  status        ExpenseStatus   @default(PENDING)
+  expectedDate  DateTime?       
+  category      String?         // e.g. "OFFICE_SUPPLIES", "MARKETING", "INVENTORY"
+  vendorName    String?
+  receiptUrl    String?
+
+  requestorId   String
+  requestor     Employee        @relation("ExpenseRequestor", fields: [requestorId], references: [id])
+  
+  // Optional depending on if tied to a specific department cost-center
+  departmentId  String?
+  department    Department?     @relation(fields: [departmentId], references: [id])
+
+  approverId    String?
+  approver      Employee?       @relation("ExpenseApprover", fields: [approverId], references: [id])
+
+  items         ExpenseItem[]
+  transaction   Transaction?    
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model ExpenseItem {
+  id               String         @id @default(uuid())
+  expenseRequestId String
+  expenseRequest   ExpenseRequest @relation(fields: [expenseRequestId], references: [id], onDelete: Cascade)
+  
+  itemName         String
+  quantity         Int            @default(1)
+  price            Float          @default(0)
+  
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 }
 
 enum Currency {

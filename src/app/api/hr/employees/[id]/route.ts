@@ -62,7 +62,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                     ...(foodAllergies !== undefined && { foodAllergies }),
                     ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
                     ...(probationEndDate !== undefined && { probationEndDate: probationEndDate ? new Date(probationEndDate) : null }),
-                    ...(managerId !== undefined && { managerId }),
+                    ...(managerId !== undefined && { managerId: managerId || null }),
                     ...(customLat !== undefined && { customLat: customLat ? parseFloat(customLat) : null }),
                     ...(customLng !== undefined && { customLng: customLng ? parseFloat(customLng) : null }),
                     ...(customRadius !== undefined && { customRadius: customRadius ? parseFloat(customRadius) : null }),

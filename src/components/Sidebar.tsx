@@ -26,6 +26,7 @@ const navigation = [
         icon: "💰",
         children: [
             { name: "กระแสเงินสด (Cash Flow)", href: "/finance/cashflow" },
+            { name: "ขออนุมัติเบิกจ่าย/จัดซื้อ (PO)", href: "/finance/expenses" },
         ]
     },
     {

@@ -56,14 +56,33 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
                 - finalDeductions - finalSS - finalTax - finalLate;
         }
 
-        const updatedPayroll = await prisma.payroll.update({
-            where: {
-                id
-            },
-            data: dataToUpdate
+        // We use a transaction so both records update atomically
+        const result = await prisma.$transaction(async (tx) => {
+            const updatedPayroll = await tx.payroll.update({
+                where: { id },
+                data: dataToUpdate,
+                include: { employee: { select: { user: { select: { name: true } } } }, transaction: true }
+            });
+
+            if (dataToUpdate.status === "PAID" && currentPayroll.status !== "PAID") {
+                if (!updatedPayroll.transaction) {
+                    await tx.transaction.create({
+                        data: {
+                            type: "EXPENSE",
+                            amount: updatedPayroll.netSalary,
+                            amountTHB: updatedPayroll.netSalary,
+                            category: "PAYROLL",
+                            description: `[PAYROLL] เงินเดือนพนักงาน: ${updatedPayroll.employee.user.name || "Unknown"} (รอบ ${updatedPayroll.month})`,
+                            payrollId: updatedPayroll.id,
+                            date: new Date()
+                        }
+                    });
+                }
+            }
+            return updatedPayroll;
         });
 
-        return NextResponse.json(updatedPayroll);
+        return NextResponse.json(result);
     } catch (err: any) {
         console.error("Payroll Update Error:", err);
         return NextResponse.json({ error: err.message }, { status: 500 });
