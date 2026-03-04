@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { action, lat, lng } = body; // action is "CHECK_IN" or "CHECK_OUT"
+        const { action, lat, lng, forceOutLocation } = body; // action is "CHECK_IN" or "CHECK_OUT"
 
         if (!action || !lat || !lng) {
             return NextResponse.json({ error: "Missing required fields (action, lat, lng)" }, { status: 400 });
@@ -66,9 +66,12 @@ export async function POST(req: NextRequest) {
         // 4. Calculate Distance
         const distance = getDistanceFromLatLonInM(lat, lng, targetLat, targetLng);
 
-        if (distance > targetRadius) {
+        const isOutOfLocation = distance > targetRadius;
+
+        if (isOutOfLocation && !forceOutLocation) {
             return NextResponse.json({
-                error: `ไม่อนุญาตให้เช็คอิน คุณอยู่ห่างจากจุดเช็คอิน ${Math.round(distance)} เมตร (จำกัดห้ามเกิน ${targetRadius} เมตร)`,
+                requiresConfirmation: true,
+                message: `คุณอยู่นอกระยะที่กำหนด (อยู่ห่างออกไป ${Math.round(distance)} เมตรจากจุดศูนย์กลาง) หากคุณดำเนินการต่อ ระบบจะบันทึกว่าคุณเข้างาน 'นอกสถานที่'`,
                 distance: Math.round(distance)
             }, { status: 400 });
         }
@@ -88,6 +91,11 @@ export async function POST(req: NextRequest) {
             // We use the start of the current day in local time.
             const todayUtc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 
+            let logStatus = isLate ? "LATE" : "ON_TIME";
+            if (isOutOfLocation && forceOutLocation) {
+                logStatus = "OUT_OF_LOCATION";
+            }
+
             try {
                 const timeLog = await prisma.timeLog.create({
                     data: {
@@ -96,7 +104,7 @@ export async function POST(req: NextRequest) {
                         checkInTime: now,
                         checkInLat: lat,
                         checkInLng: lng,
-                        status: isLate ? "LATE" : "ON_TIME"
+                        status: logStatus
                     }
                 });
 

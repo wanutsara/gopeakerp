@@ -33,6 +33,7 @@ const navigation = [
         name: "ระบบบุคคล (HR)",
         icon: "👥",
         children: [
+            { name: "บัญชาการลงเวลา (The Pulse)", href: "/hr/attendance" },
             { name: "รายชื่อพนักงาน", href: "/hr" },
             { name: "แผนก (Departments)", href: "/hr/departments" },
             { name: "เงินเดือน (Payroll)", href: "/hr/payroll" },
@@ -62,7 +63,7 @@ export default function Sidebar() {
     const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
         const initial: Record<string, boolean> = {};
         for (const item of navigation) {
-            if (item.children && item.children.some(child => pathname.startsWith(child.href) && child.href !== "/hr" || (child.href === "/hr" && (pathname === "/hr" || pathname.startsWith("/hr/create") || pathname.match(/^\/hr\/[a-zA-Z0-9]+$/))))) {
+            if (item.children && item.children.some(child => pathname.startsWith(child.href) && child.href !== "/hr" || (child.href === "/hr" && (pathname === "/hr" || pathname.startsWith("/hr/create") || pathname.match(/^\/hr\/(?!attendance|departments|payroll|leave|settings)[a-zA-Z0-9_-]+$/))))) {
                 initial[item.name] = true;
             } else if (item.children && pathname.startsWith('/hr')) {
                 initial[item.name] = true; // fallback
@@ -106,7 +107,7 @@ export default function Sidebar() {
 
                         // For nested items
                         const isOpen = openMenus[item.name];
-                        const isChildActive = item.children!.some(child => pathname.startsWith(child.href) && child.href !== "/hr" || (child.href === "/hr" && (pathname === "/hr" || pathname.startsWith("/hr/create") || pathname.match(/^\/hr\/[a-zA-Z0-9]+$/))));
+                        const isChildActive = item.children!.some(child => pathname.startsWith(child.href) && child.href !== "/hr" || (child.href === "/hr" && (pathname === "/hr" || pathname.startsWith("/hr/create") || pathname.match(/^\/hr\/(?!attendance|departments|payroll|leave|settings)[a-zA-Z0-9_-]+$/))));
 
                         return (
                             <div key={item.name} className="space-y-1">
@@ -131,7 +132,7 @@ export default function Sidebar() {
                                     <div className="pl-11 pr-2 space-y-1 animate-in slide-in-from-top-1 fade-in duration-200">
                                         {item.children!.map(child => {
                                             // Special matching logic because /hr is root, so /hr/payroll matches /hr
-                                            const isExactChildActive = (child.href === "/hr" && (pathname === "/hr" || pathname.startsWith("/hr/create") || pathname.match(/^\/hr\/[a-zA-Z0-9]+$/))) ||
+                                            const isExactChildActive = (child.href === "/hr" && (pathname === "/hr" || pathname.startsWith("/hr/create") || pathname.match(/^\/hr\/(?!attendance|departments|payroll|leave|settings)[a-zA-Z0-9_-]+$/))) ||
                                                 (child.href !== "/hr" && pathname.startsWith(child.href));
                                             return (
                                                 <Link

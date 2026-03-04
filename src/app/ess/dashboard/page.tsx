@@ -49,7 +49,27 @@ export default function PortalDashboard() {
                     const result = await res.json();
 
                     if (!res.ok) {
-                        setGpsError(result.error || "เกิดข้อผิดพลาดในการลงเวลา");
+                        if (res.status === 400 && result.requiresConfirmation) {
+                            if (window.confirm(result.message)) {
+                                // Force check-in
+                                const forceRes = await fetch("/api/attendance/check-in", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ action, lat, lng, forceOutLocation: true })
+                                });
+                                const forceResult = await forceRes.json();
+                                if (!forceRes.ok) {
+                                    setGpsError(forceResult.error || "เกิดข้อผิดพลาดในการลงเวลา");
+                                } else {
+                                    setSuccessMsg(`${forceResult.message} (ความคลาดเคลื่อน ${forceResult.distance}m)`);
+                                    mutate();
+                                }
+                            } else {
+                                setGpsError("ยกเลิกการลงเวลา");
+                            }
+                        } else {
+                            setGpsError(result.error || "เกิดข้อผิดพลาดในการลงเวลา");
+                        }
                     } else {
                         setSuccessMsg(`${result.message} (ความคลาดเคลื่อน ${result.distance}m)`);
                         mutate(); // Refresh status
@@ -168,9 +188,13 @@ export default function PortalDashboard() {
                         )}
                         <div className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-2xl">
                             <span className="text-sm font-medium text-gray-600">สถานะ</span>
-                            <span className={`text-xs font-bold px-3 py-1 rounded-full ${todayLog.status === 'ON_TIME' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            <span className={`text-xs font-bold px-3 py-1 rounded-full ${todayLog.status === 'ON_TIME' ? 'bg-green-100 text-green-700' :
+                                    todayLog.status === 'OUT_OF_LOCATION' ? 'bg-purple-100 text-purple-700' :
+                                        'bg-red-100 text-red-700'
                                 }`}>
-                                {todayLog.status === 'ON_TIME' ? "มาตรงเวลา" : "มาสาย (LATE)"}
+                                {todayLog.status === 'ON_TIME' ? "มาตรงเวลา" :
+                                    todayLog.status === 'OUT_OF_LOCATION' ? "เช็คอินนอกสถานที่" :
+                                        "มาสาย (LATE)"}
                             </span>
                         </div>
                     </div>
