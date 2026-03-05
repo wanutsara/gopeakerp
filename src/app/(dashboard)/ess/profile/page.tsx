@@ -1,7 +1,7 @@
 'use client';
 import useSWR from 'swr';
 import Image from 'next/image';
-import { ShieldCheckIcon, TrophyIcon, FireIcon, CurrencyDollarIcon, StarIcon, ChartBarIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, TrophyIcon, FireIcon, CurrencyDollarIcon, StarIcon, ChartBarIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
 const fetcher = async (url: string) => {
     const res = await fetch(url);

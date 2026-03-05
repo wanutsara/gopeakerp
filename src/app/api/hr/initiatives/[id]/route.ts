@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getServerSession(authOptions);
         if (!session || !session.user) {
@@ -11,7 +11,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         }
 
         const { status, health } = await request.json();
-        const initiativeId = params.id;
+        const { id: initiativeId } = await params;
 
         const isManager = ['OWNER', 'MANAGER', 'HR'].includes(session.user.role);
 

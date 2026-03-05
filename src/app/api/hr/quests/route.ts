@@ -110,11 +110,11 @@ export async function PATCH(request: Request) {
         const { questId, action } = await request.json();
         if (!questId || !action) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
-        const quest = await prisma.quest.findUnique({ where: { id: questId }, include: { assignee: true } });
+        const quest = await prisma.quest.findUnique({ where: { id: questId }, include: { assignedTo: true } });
         if (!quest) return NextResponse.json({ error: 'Quest not found' }, { status: 404 });
 
         if (action === 'approve' && quest.status === 'REVIEWING') {
-            const employee = quest.assignee;
+            const employee = quest.assignedTo;
             if (!employee) return NextResponse.json({ error: 'No employee assigned' }, { status: 400 });
 
             // Core Gamification Algorithm: Payout EXP and level up calculation

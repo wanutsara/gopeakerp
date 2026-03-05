@@ -1,0 +1,451 @@
+
+> gopeakerp@0.1.0 dev
+> next dev -p 3001
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.31.145:3001
+- Environments: .env
+
+✓ Starting...
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+✓ Ready in 1258ms
+ GET / 307 in 999ms (compile: 785ms, proxy.ts: 105ms, render: 109ms)
+ GET /dashboard 200 in 2.2s (compile: 126ms, proxy.ts: 5ms, render: 2.1s)
+ GET /api/notifications 200 in 395ms (compile: 134ms, render: 261ms)
+ GET /api/auth/session 200 in 648ms (compile: 639ms, render: 9ms)
+ GET /oms/products 200 in 177ms (compile: 157ms, proxy.ts: 5ms, render: 14ms)
+ GET /api/oms/products?mappings=true 200 in 233ms (compile: 42ms, render: 191ms)
+ GET /api/notifications 200 in 100ms (compile: 5ms, render: 95ms)
+ POST /api/oms/products 201 in 105ms (compile: 6ms, render: 98ms)
+ GET /api/oms/products?mappings=true 200 in 194ms (compile: 2ms, render: 191ms)
+ GET /oms/import 200 in 136ms (compile: 109ms, proxy.ts: 7ms, render: 20ms)
+ GET /api/notifications 200 in 268ms (compile: 6ms, render: 262ms)
+ GET /finance/cashflow 200 in 71ms (compile: 50ms, proxy.ts: 7ms, render: 14ms)
+ GET /api/finance/analytics 200 in 683ms (compile: 37ms, render: 646ms)
+ GET /api/finance/transactions 200 in 683ms (compile: 59ms, render: 624ms)
+ GET /api/finance/transactions 200 in 167ms (compile: 8ms, render: 160ms)
+ GET /api/finance/analytics 200 in 551ms (compile: 6ms, render: 545ms)
+ GET /api/notifications 200 in 729ms (compile: 4ms, render: 725ms)
+ GET /finance/expenses 200 in 69ms (compile: 50ms, proxy.ts: 5ms, render: 14ms)
+ GET /api/finance/expenses 200 in 823ms (compile: 34ms, render: 789ms)
+ GET /hr/announcements 200 in 50ms (compile: 27ms, proxy.ts: 7ms, render: 16ms)
+ GET /api/hr/departments 200 in 275ms (compile: 60ms, render: 215ms)
+ GET /api/hr/announcements 200 in 418ms (compile: 28ms, render: 390ms)
+ GET /api/notifications 200 in 92ms (compile: 3ms, render: 90ms)
+ GET /hr/attendance 200 in 93ms (compile: 72ms, proxy.ts: 7ms, render: 13ms)
+ GET /api/hr/attendance/analytics 200 in 1346ms (compile: 33ms, render: 1314ms)
+ GET /api/notifications 200 in 295ms (compile: 4ms, render: 291ms)
+ GET /hr/org-chart 200 in 100ms (compile: 76ms, proxy.ts: 9ms, render: 15ms)
+ GET /api/hr/org-chart 200 in 484ms (compile: 26ms, render: 459ms)
+ PATCH /api/hr/org-chart 200 in 283ms (compile: 4ms, render: 280ms)
+ GET /api/hr/org-chart 200 in 164ms (compile: 2ms, render: 161ms)
+ GET /api/notifications 200 in 282ms (compile: 4ms, render: 278ms)
+ GET /hr 200 in 702ms (compile: 36ms, proxy.ts: 18ms, render: 647ms)
+ GET /hr/cmmay2z4h000tsbe6v8g739lf 200 in 394ms (compile: 375ms, proxy.ts: 5ms, render: 14ms)
+ GET /api/hr/departments 200 in 143ms (compile: 4ms, render: 139ms)
+ GET /api/settings/roles 200 in 407ms (compile: 27ms, render: 380ms)
+ GET /api/hr/employees 200 in 609ms (compile: 56ms, render: 552ms)
+ GET /api/hr/employees/cmmay2z4h000tsbe6v8g739lf 200 in 903ms (compile: 525ms, render: 378ms)
+ GET /api/hr/employees/cmmay2z4h000tsbe6v8g739lf 200 in 223ms (compile: 4ms, render: 219ms)
+ GET /hr/cmmay2z4h000tsbe6v8g739lf 200 in 24ms (compile: 5ms, proxy.ts: 6ms, render: 12ms)
+ GET /api/hr/departments 200 in 134ms (compile: 4ms, render: 130ms)
+ GET /api/settings/roles 200 in 356ms (compile: 6ms, render: 350ms)
+ GET /api/hr/employees 200 in 474ms (compile: 2ms, render: 472ms)
+ GET /api/hr/employees/cmmay2z4h000tsbe6v8g739lf 200 in 497ms (compile: 3ms, render: 494ms)
+ GET /api/hr/employees/cmmay2z4h000tsbe6v8g739lf 200 in 334ms (compile: 2ms, render: 332ms)
+ GET /api/notifications 200 in 88ms (compile: 1920µs, render: 86ms)
+ GET /api/settings/roles 200 in 213ms (compile: 5ms, render: 208ms)
+ GET /api/hr/departments 200 in 220ms (compile: 3ms, render: 217ms)
+ GET /api/notifications 200 in 233ms (compile: 4ms, render: 229ms)
+ GET /api/hr/employees 200 in 674ms (compile: 6ms, render: 668ms)
+ GET /api/notifications 200 in 198ms (compile: 3ms, render: 195ms)
+ POST /api/hr/leave-balances 200 in 338ms (compile: 33ms, render: 306ms)
+ GET /api/hr/employees/cmmay2z4h000tsbe6v8g739lf 200 in 399ms (compile: 5ms, render: 395ms)
+ PUT /api/hr/employees/cmmay2z4h000tsbe6v8g739lf 200 in 689ms (compile: 4ms, render: 685ms)
+ GET /hr 200 in 578ms (compile: 6ms, proxy.ts: 5ms, render: 568ms)
+ GET /hr 200 in 572ms (compile: 12ms, proxy.ts: 4ms, render: 556ms)
+ GET /hr/departments 200 in 73ms (compile: 59ms, proxy.ts: 3ms, render: 11ms)
+ GET /api/hr/departments 200 in 53ms (compile: 1471µs, render: 52ms)
+ GET /hr/payroll 200 in 49ms (compile: 34ms, proxy.ts: 3ms, render: 12ms)
+ GET /api/hr/payroll?month=2026-03 200 in 467ms (compile: 27ms, render: 440ms)
+ GET /api/notifications 200 in 88ms (compile: 1886µs, render: 86ms)
+ GET /hr/leave 200 in 67ms (compile: 49ms, proxy.ts: 3ms, render: 15ms)
+ GET /api/hr/leave 200 in 209ms (compile: 36ms, render: 173ms)
+ GET /hr/overtime 200 in 42ms (compile: 28ms, proxy.ts: 3ms, render: 11ms)
+ GET /api/hr/overtime 200 in 160ms (compile: 29ms, render: 131ms)
+ GET /api/hr/employees 200 in 318ms (compile: 1867µs, render: 316ms)
+ GET /hr/expenses 200 in 42ms (compile: 21ms, proxy.ts: 5ms, render: 16ms)
+ GET /api/hr/expenses 200 in 731ms (compile: 23ms, render: 709ms)
+ GET /api/notifications 200 in 92ms (compile: 1925µs, render: 90ms)
+ GET /hr/quests 200 in 49ms (compile: 32ms, proxy.ts: 4ms, render: 13ms)
+ GET /api/hr/quests 200 in 156ms (compile: 24ms, render: 132ms)
+ GET /api/hr/employees 200 in 431ms (compile: 3ms, render: 429ms)
+ GET /hr/goals 200 in 47ms (compile: 28ms, proxy.ts: 7ms, render: 13ms)
+ GET /api/hr/employees 200 in 369ms (compile: 1572µs, render: 367ms)
+ GET /api/hr/goals 200 in 506ms (compile: 25ms, render: 481ms)
+ GET /api/notifications 200 in 544ms (compile: 4ms, render: 540ms)
+ GET /api/notifications 200 in 189ms (compile: 3ms, render: 187ms)
+ GET /api/notifications 200 in 136ms (compile: 6ms, render: 130ms)
+ POST /api/hr/goals 201 in 306ms (compile: 3ms, render: 303ms)
+ GET /api/hr/goals 200 in 397ms (compile: 1739µs, render: 395ms)
+ GET /api/notifications 200 in 223ms (compile: 4ms, render: 219ms)
+ POST /api/hr/initiatives 201 in 1024ms (compile: 35ms, render: 989ms)
+ GET /api/notifications 200 in 238ms (compile: 2ms, render: 236ms)
+ GET /api/hr/employees 200 in 464ms (compile: 6ms, render: 459ms)
+ GET /api/hr/goals 200 in 753ms (compile: 5ms, render: 748ms)
+ GET /api/auth/session 200 in 22ms (compile: 14ms, render: 7ms)
+ GET /api/notifications 200 in 297ms (compile: 9ms, render: 288ms)
+ GET /api/hr/employees 200 in 398ms (compile: 3ms, render: 395ms)
+ GET /api/hr/goals 200 in 426ms (compile: 6ms, render: 420ms)
+ GET /hr/settings 200 in 88ms (compile: 57ms, proxy.ts: 12ms, render: 19ms)
+ GET /api/hr/settings 200 in 128ms (compile: 46ms, render: 83ms)
+ GET /api/notifications 200 in 228ms (compile: 5ms, render: 223ms)
+ GET /ess/dashboard 200 in 142ms (compile: 108ms, proxy.ts: 8ms, render: 26ms)
+ GET /api/ess/me 404 in 211ms (compile: 37ms, render: 174ms)
+ GET /api/ess/goals 404 in 319ms (compile: 58ms, render: 261ms)
+ GET /api/ess/leave 404 in 184ms (compile: 23ms, render: 161ms)
+ GET /api/ess/overtime 404 in 65ms (compile: 23ms, render: 42ms)
+ GET /api/ess/expenses 404 in 75ms (compile: 26ms, render: 50ms)
+ GET /api/notifications 200 in 81ms (compile: 1193µs, render: 80ms)
+ GET /api/ess/announcements 200 in 575ms (compile: 53ms, render: 523ms)
+ GET /api/ess/mood 400 in 575ms (compile: 117ms, render: 458ms)
+ GET /api/ess/colleagues 200 in 717ms (compile: 76ms, render: 641ms)
+ GET /api/ess/kudos 200 in 849ms (compile: 99ms, render: 751ms)
+ GET /api/hr/settings 200 in 86ms (compile: 4ms, render: 82ms)
+ GET /api/notifications 200 in 225ms (compile: 1400µs, render: 224ms)
+ GET /ess/workspace 200 in 48ms (compile: 27ms, proxy.ts: 8ms, render: 14ms)
+ GET /api/ess/quests 404 in 114ms (compile: 25ms, render: 89ms)
+ GET /api/hr/initiatives 200 in 727ms (compile: 2ms, render: 724ms)
+ GET /ess/quests 200 in 44ms (compile: 28ms, proxy.ts: 4ms, render: 13ms)
+ GET /ess/goals 200 in 44ms (compile: 25ms, proxy.ts: 3ms, render: 16ms)
+ GET /api/ess/goals 404 in 171ms (compile: 1382µs, render: 170ms)
+ GET /ess/workspace 200 in 19ms (compile: 3ms, proxy.ts: 4ms, render: 13ms)
+ GET /api/ess/quests 404 in 48ms (compile: 1177µs, render: 47ms)
+ GET /api/hr/initiatives 200 in 689ms (compile: 2ms, render: 686ms)
+ GET /api/ess/quests 404 in 136ms (compile: 1414µs, render: 135ms)
+ GET /api/auth/csrf 200 in 13ms (compile: 6ms, render: 7ms)
+ POST /api/auth/signout 200 in 9ms (compile: 1985µs, render: 7ms)
+ GET /login 200 in 64ms (compile: 23ms, proxy.ts: 2ms, render: 39ms)
+ GET /api/auth/session 200 in 17ms (compile: 3ms, render: 14ms)
+ GET /api/auth/providers 200 in 9ms (compile: 4ms, render: 6ms)
+ GET /api/auth/csrf 200 in 7ms (compile: 1354µs, render: 5ms)
+ POST /api/auth/callback/credentials 200 in 205ms (compile: 1226µs, render: 203ms)
+ GET /api/auth/session 200 in 8ms (compile: 1365µs, render: 7ms)
+ GET /dashboard 200 in 510ms (compile: 3ms, proxy.ts: 2ms, render: 504ms)
+ GET /api/notifications 200 in 309ms (compile: 3ms, render: 306ms)
+ GET /api/auth/session 200 in 20ms (compile: 5ms, render: 15ms)
+ GET /ess/dashboard 200 in 34ms (compile: 4ms, proxy.ts: 7ms, render: 24ms)
+ GET /api/ess/colleagues 200 in 300ms (compile: 3ms, render: 297ms)
+ GET /api/ess/kudos 200 in 404ms (compile: 3ms, render: 401ms)
+ GET /api/ess/goals 200 in 423ms (compile: 1751µs, render: 421ms)
+ GET /api/ess/mood 200 in 540ms (compile: 9ms, render: 530ms)
+ GET /api/ess/announcements 200 in 609ms (compile: 6ms, render: 603ms)
+ GET /api/ess/expenses 200 in 171ms (compile: 1855µs, render: 169ms)
+ GET /api/notifications 200 in 124ms (compile: 1455µs, render: 123ms)
+ GET /api/ess/me 200 in 700ms (compile: 3ms, render: 697ms)
+ GET /api/ess/leave 200 in 376ms (compile: 1938µs, render: 374ms)
+ GET /api/ess/overtime 200 in 321ms (compile: 1864µs, render: 319ms)
+ GET /api/notifications 200 in 92ms (compile: 2ms, render: 90ms)
+ GET /api/notifications 200 in 92ms (compile: 3ms, render: 88ms)
+ GET /api/ess/colleagues 200 in 246ms (compile: 5ms, render: 241ms)
+ GET /api/ess/kudos 200 in 366ms (compile: 5ms, render: 361ms)
+ GET /api/ess/goals 200 in 368ms (compile: 1646µs, render: 366ms)
+ GET /api/ess/mood 200 in 492ms (compile: 6ms, render: 486ms)
+ GET /api/ess/expenses 200 in 127ms (compile: 1548µs, render: 125ms)
+ GET /api/ess/announcements 200 in 611ms (compile: 6ms, render: 605ms)
+ GET /api/ess/leave 200 in 352ms (compile: 1665µs, render: 351ms)
+ GET /api/ess/overtime 200 in 403ms (compile: 1869µs, render: 401ms)
+ GET /api/ess/me 200 in 792ms (compile: 6ms, render: 786ms)
+ GET /api/notifications 200 in 201ms (compile: 3ms, render: 198ms)
+ POST /api/attendance/check-in 400 in 593ms (compile: 44ms, render: 549ms)
+ GET /api/notifications 200 in 163ms (compile: 3ms, render: 160ms)
+ POST /api/attendance/check-in 200 in 530ms (compile: 4ms, render: 526ms)
+ GET /api/ess/kudos 200 in 410ms (compile: 8ms, render: 402ms)
+ GET /api/ess/colleagues 200 in 407ms (compile: 11ms, render: 396ms)
+ GET /api/ess/goals 200 in 173ms (compile: 1792µs, render: 171ms)
+ GET /api/ess/mood 200 in 542ms (compile: 7ms, render: 535ms)
+ GET /api/ess/announcements 200 in 599ms (compile: 9ms, render: 591ms)
+ GET /api/ess/expenses 200 in 236ms (compile: 2ms, render: 233ms)
+ GET /api/ess/overtime 200 in 372ms (compile: 4ms, render: 367ms)
+ GET /api/ess/me 200 in 815ms (compile: 4ms, render: 811ms)
+ GET /api/ess/leave 200 in 445ms (compile: 1999µs, render: 443ms)
+ GET /api/ess/me 200 in 294ms (compile: 1174µs, render: 293ms)
+ GET /api/notifications 200 in 200ms (compile: 4ms, render: 196ms)
+ GET /api/auth/session 200 in 28ms (compile: 7ms, render: 21ms)
+ GET /api/notifications 200 in 147ms (compile: 7ms, render: 140ms)
+ GET /api/ess/colleagues 200 in 354ms (compile: 1873µs, render: 352ms)
+ GET /api/ess/goals 200 in 409ms (compile: 3ms, render: 406ms)
+ GET /api/ess/mood 200 in 581ms (compile: 10ms, render: 571ms)
+ GET /api/ess/announcements 200 in 620ms (compile: 6ms, render: 614ms)
+ GET /api/ess/kudos 200 in 649ms (compile: 10ms, render: 638ms)
+ GET /api/ess/overtime 200 in 132ms (compile: 1442µs, render: 131ms)
+ GET /api/ess/expenses 200 in 241ms (compile: 1369µs, render: 239ms)
+ GET /api/ess/leave 200 in 441ms (compile: 1891µs, render: 439ms)
+ GET /api/ess/me 200 in 844ms (compile: 7ms, render: 837ms)
+ GET /api/notifications 200 in 111ms (compile: 3ms, render: 108ms)
+ GET /api/auth/session 200 in 30ms (compile: 12ms, render: 18ms)
+ GET /api/notifications 200 in 152ms (compile: 2ms, render: 150ms)
+ GET /api/ess/kudos 200 in 246ms (compile: 6ms, render: 240ms)
+ GET /api/ess/colleagues 200 in 335ms (compile: 1240µs, render: 334ms)
+ GET /api/ess/mood 200 in 412ms (compile: 4ms, render: 409ms)
+ GET /api/ess/goals 200 in 317ms (compile: 1265µs, render: 316ms)
+ GET /api/ess/expenses 200 in 220ms (compile: 1503µs, render: 219ms)
+ GET /api/ess/announcements 200 in 686ms (compile: 9ms, render: 677ms)
+ GET /api/ess/me 200 in 688ms (compile: 5ms, render: 682ms)
+ GET /api/ess/overtime 200 in 336ms (compile: 1434µs, render: 335ms)
+ GET /api/ess/leave 200 in 501ms (compile: 1791µs, render: 499ms)
+ GET /api/notifications 200 in 143ms (compile: 7ms, render: 137ms)
+ GET /api/notifications 200 in 98ms (compile: 1503µs, render: 96ms)
+ GET /api/ess/colleagues 200 in 173ms (compile: 4ms, render: 169ms)
+ GET /api/ess/kudos 200 in 202ms (compile: 4ms, render: 197ms)
+ GET /api/ess/goals 200 in 294ms (compile: 1535µs, render: 292ms)
+ GET /api/ess/mood 200 in 384ms (compile: 9ms, render: 376ms)
+ GET /api/ess/overtime 200 in 363ms (compile: 1522µs, render: 361ms)
+ GET /api/ess/leave 200 in 409ms (compile: 1591µs, render: 407ms)
+ GET /api/ess/me 200 in 614ms (compile: 3ms, render: 611ms)
+ GET /api/ess/expenses 200 in 222ms (compile: 1655µs, render: 220ms)
+ GET /api/ess/announcements 200 in 649ms (compile: 6ms, render: 643ms)
+ GET /api/ess/colleagues 200 in 241ms (compile: 4ms, render: 237ms)
+ GET /api/ess/kudos 200 in 273ms (compile: 5ms, render: 268ms)
+ GET /api/notifications 200 in 293ms (compile: 5ms, render: 288ms)
+ GET /api/ess/mood 200 in 451ms (compile: 6ms, render: 445ms)
+ GET /api/ess/announcements 200 in 465ms (compile: 6ms, render: 459ms)
+ GET /api/ess/goals 200 in 368ms (compile: 1681µs, render: 366ms)
+ GET /api/ess/overtime 200 in 367ms (compile: 4ms, render: 364ms)
+ GET /api/ess/me 200 in 669ms (compile: 3ms, render: 666ms)
+ GET /api/ess/expenses 200 in 246ms (compile: 1453µs, render: 244ms)
+ GET /api/ess/leave 200 in 422ms (compile: 1616µs, render: 420ms)
+ POST /api/upload 200 in 112ms (compile: 100ms, render: 12ms)
+ POST /api/ess/expenses 200 in 887ms (compile: 1118µs, render: 885ms)
+ GET /api/ess/expenses 200 in 173ms (compile: 2ms, render: 171ms)
+ GET /api/notifications 200 in 91ms (compile: 4ms, render: 87ms)
+ GET /api/notifications 200 in 212ms (compile: 3ms, render: 209ms)
+ GET /hr/expenses 200 in 33ms (compile: 7ms, proxy.ts: 8ms, render: 18ms)
+ POST /api/notifications 200 in 251ms (compile: 3ms, render: 247ms)
+ GET /api/notifications 200 in 89ms (compile: 1434µs, render: 88ms)
+ GET /api/hr/expenses 200 in 942ms (compile: 2ms, render: 940ms)
+ PATCH /api/hr/expenses/834f167b-77e0-46c8-be5e-a47bb1b65e5b 200 in 1149ms (compile: 639ms, render: 510ms)
+ PATCH /api/hr/expenses/834f167b-77e0-46c8-be5e-a47bb1b65e5b 200 in 468ms (compile: 5ms, render: 463ms)
+ GET /api/hr/expenses 200 in 519ms (compile: 3ms, render: 516ms)
+ GET /api/hr/expenses 200 in 498ms (compile: 3ms, render: 496ms)
+ PATCH /api/hr/expenses/834f167b-77e0-46c8-be5e-a47bb1b65e5b 200 in 206ms (compile: 4ms, render: 202ms)
+ GET /api/hr/expenses 200 in 418ms (compile: 1193µs, render: 417ms)
+ GET /finance/cashflow 200 in 20ms (compile: 4ms, proxy.ts: 4ms, render: 12ms)
+ GET /api/finance/transactions 200 in 185ms (compile: 6ms, render: 179ms)
+ GET /api/finance/analytics 200 in 501ms (compile: 1892µs, render: 499ms)
+ GET /hr/expenses 200 in 23ms (compile: 3ms, proxy.ts: 5ms, render: 15ms)
+ GET /api/hr/expenses 200 in 640ms (compile: 3ms, render: 638ms)
+ GET /api/notifications 200 in 89ms (compile: 2ms, render: 87ms)
+ PATCH /api/hr/expenses/834f167b-77e0-46c8-be5e-a47bb1b65e5b 200 in 492ms (compile: 6ms, render: 486ms)
+ GET /api/hr/expenses 200 in 351ms (compile: 1412µs, render: 350ms)
+ GET /finance/cashflow 200 in 18ms (compile: 4ms, proxy.ts: 4ms, render: 10ms)
+ GET /api/finance/transactions 200 in 124ms (compile: 5ms, render: 120ms)
+ GET /api/finance/analytics 200 in 375ms (compile: 2ms, render: 373ms)
+ GET /api/notifications 200 in 535ms (compile: 4ms, render: 531ms)
+ GET /hr/org-chart 200 in 27ms (compile: 4ms, proxy.ts: 6ms, render: 17ms)
+ GET /api/hr/org-chart 200 in 367ms (compile: 5ms, render: 362ms)
+ PATCH /api/hr/org-chart 200 in 175ms (compile: 3ms, render: 172ms)
+ GET /api/notifications 200 in 121ms (compile: 1504µs, render: 119ms)
+ GET /api/hr/org-chart 200 in 160ms (compile: 1939µs, render: 158ms)
+ GET /dashboard 200 in 548ms (compile: 4ms, proxy.ts: 5ms, render: 540ms)
+ GET /api/notifications 200 in 136ms (compile: 6ms, render: 130ms)
+ GET /api/notifications 200 in 89ms (compile: 2ms, render: 87ms)
+ GET /api/notifications 200 in 131ms (compile: 5ms, render: 126ms)
+ GET /ess/workspace 200 in 27ms (compile: 3ms, proxy.ts: 7ms, render: 17ms)
+ GET /api/ess/quests 200 in 520ms (compile: 8ms, render: 512ms)
+ GET /api/hr/initiatives 200 in 749ms (compile: 3ms, render: 746ms)
+ GET /api/notifications 200 in 89ms (compile: 3ms, render: 86ms)
+ GET /api/notifications 200 in 133ms (compile: 3ms, render: 129ms)
+ GET /ess/quests 200 in 25ms (compile: 3ms, proxy.ts: 7ms, render: 15ms)
+ GET /api/hr/initiatives 200 in 772ms (compile: 4ms, render: 768ms)
+ GET /api/ess/quests 200 in 808ms (compile: 7ms, render: 801ms)
+ GET /ess/goals 200 in 21ms (compile: 4ms, proxy.ts: 5ms, render: 12ms)
+ GET /api/ess/goals 200 in 310ms (compile: 2ms, render: 308ms)
+ GET /ess/profile 200 in 84ms (compile: 68ms, proxy.ts: 5ms, render: 11ms)
+ GET /api/ess/profile 200 in 500ms (compile: 26ms, render: 474ms)
+ GET /api/notifications 200 in 152ms (compile: 5ms, render: 148ms)
+ GET /settings/roles 200 in 66ms (compile: 43ms, proxy.ts: 8ms, render: 15ms)
+ GET /api/settings/roles 200 in 162ms (compile: 3ms, render: 159ms)
+ GET /api/notifications 200 in 581ms (compile: 4ms, render: 577ms)
+ GET /api/auth/session 200 in 29ms (compile: 13ms, render: 16ms)
+ GET /api/notifications 200 in 1452ms (compile: 39ms, render: 1414ms)
+ GET /api/settings/roles 200 in 1449ms (compile: 20ms, render: 1429ms)
+✓ Compiled in 500ms
+ GET /ess/login 200 in 464ms (compile: 164ms, proxy.ts: 78ms, render: 221ms)
+ GET /api/auth/session 200 in 61ms (compile: 46ms, render: 15ms)
+ GET /api/notifications 200 in 871ms (compile: 102ms, render: 769ms)
+ GET / 307 in 84ms (compile: 29ms, proxy.ts: 3ms, render: 53ms)
+ GET /dashboard 200 in 1045ms (compile: 128ms, proxy.ts: 3ms, render: 915ms)
+ GET /api/auth/session 200 in 11ms (compile: 3ms, render: 7ms)
+ GET /api/notifications 200 in 160ms (compile: 1986µs, render: 158ms)
+ GET /ess/dashboard 200 in 50ms (compile: 17ms, proxy.ts: 3ms, render: 30ms)
+ GET /api/notifications 200 in 826ms (compile: 26ms, render: 800ms)
+ GET /api/ess/colleagues 200 in 862ms (compile: 24ms, render: 839ms)
+ GET /api/ess/kudos 200 in 1112ms (compile: 93ms, render: 1019ms)
+ GET /api/ess/me 200 in 1208ms (compile: 24ms, render: 1184ms)
+ GET /api/ess/mood 200 in 1269ms (compile: 69ms, render: 1201ms)
+ GET /api/ess/expenses 200 in 330ms (compile: 33ms, render: 297ms)
+ GET /api/ess/overtime 200 in 327ms (compile: 27ms, render: 300ms)
+ GET /api/ess/announcements 200 in 1495ms (compile: 47ms, render: 1448ms)
+ GET /api/ess/leave 200 in 728ms (compile: 24ms, render: 705ms)
+ GET /api/ess/goals 200 in 402ms (compile: 24ms, render: 377ms)
+ GET /dashboard 200 in 717ms (compile: 4ms, proxy.ts: 5ms, render: 708ms)
+ GET /ess/workspace 200 in 198ms (compile: 173ms, proxy.ts: 4ms, render: 21ms)
+ GET /api/ess/quests 200 in 699ms (compile: 51ms, render: 648ms)
+ GET /api/hr/initiatives 200 in 1141ms (compile: 26ms, render: 1115ms)
+ GET /api/notifications 200 in 280ms (compile: 5ms, render: 275ms)
+ GET /api/hr/initiatives 200 in 692ms (compile: 9ms, render: 683ms)
+ GET /api/ess/quests 200 in 820ms (compile: 12ms, render: 809ms)
+Error: Route "/api/hr/initiatives/[id]/quests" used `params.id`. `params` is a Promise and must be unwrapped with `await` or `React.use()` before accessing its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (src/app/api/hr/initiatives/[id]/quests/route.ts:16:37)
+  14 |         }
+  15 |
+> 16 |         const initiativeId = params.id;
+     |                                     ^
+  17 |
+  18 |         const quests = await prisma.quest.findMany({
+  19 |             where: { initiativeId },
+Error fetching initiative quests: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].quest.findMany()` invocation in
+/Users/tara/GOPEAK ERP/gopeakerp/.next/dev/server/chunks/[root-of-the-server]__ce2b2f11._.js:236:165
+
+  233     });
+  234 }
+  235 const initiativeId = params.id;
+→ 236 const quests = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].quest.findMany({
+        where: {
+          initiativeId: undefined
+        },
+        include: {
+          assignedTo: {
+            select: {
+              user: {
+                select: {
+                  name: true,
+                  image: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          orderIndex: "asc",
+          ~~~~~~~~~~
+      ?   id?: SortOrder,
+      ?   title?: SortOrder,
+      ?   description?: SortOrder | SortOrderInput,
+      ?   expReward?: SortOrder,
+      ?   coinReward?: SortOrder,
+      ?   deadline?: SortOrder | SortOrderInput,
+      ?   assignedToId?: SortOrder | SortOrderInput,
+      ?   creatorId?: SortOrder,
+      ?   initiativeId?: SortOrder | SortOrderInput,
+      ?   status?: SortOrder,
+      ?   createdAt?: SortOrder,
+      ?   updatedAt?: SortOrder,
+      ?   assignedTo?: EmployeeOrderByWithRelationInput,
+      ?   creator?: UserOrderByWithRelationInput,
+      ?   initiative?: InitiativeOrderByWithRelationInput,
+      ?   logs?: QuestLogOrderByRelationAggregateInput
+        }
+      })
+
+Unknown argument `orderIndex`. Available options are marked with ?.
+    at <unknown> (src/app/api/hr/initiatives/[id]/quests/route.ts:18:43)
+    at async GET (src/app/api/hr/initiatives/[id]/quests/route.ts:18:24)
+  16 |         const initiativeId = params.id;
+  17 |
+> 18 |         const quests = await prisma.quest.findMany({
+     |                                           ^
+  19 |             where: { initiativeId },
+  20 |             include: {
+  21 |                 assignedTo: { {
+  clientVersion: '6.19.2'
+}
+ GET /api/hr/initiatives/cmmcdc546000bsbycj6vyzupi/quests 500 in 1045ms (compile: 833ms, render: 211ms)
+ GET /ess/login 200 in 58ms (compile: 4ms, proxy.ts: 8ms, render: 46ms)
+ GET /api/auth/session 200 in 26ms (compile: 4ms, render: 22ms)
+ GET /dashboard 200 in 570ms (compile: 3ms, proxy.ts: 3ms, render: 563ms)
+ GET /api/auth/session 200 in 37ms (compile: 4ms, render: 32ms)
+ GET /ess/workspace 200 in 25ms (compile: 3ms, proxy.ts: 6ms, render: 15ms)
+ GET /api/hr/initiatives 200 in 570ms (compile: 2ms, render: 568ms)
+ GET /api/ess/quests 200 in 647ms (compile: 7ms, render: 640ms)
+ GET /ess/quests 200 in 106ms (compile: 86ms, proxy.ts: 4ms, render: 17ms)
+ GET /api/ess/quests 200 in 601ms (compile: 2ms, render: 599ms)
+ GET /api/ess/quests 200 in 676ms (compile: 7ms, render: 670ms)
+ GET /api/hr/initiatives 200 in 1039ms (compile: 4ms, render: 1035ms)
+ GET /api/notifications 200 in 379ms (compile: 12ms, render: 367ms)
+Error: Route "/api/hr/initiatives/[id]/quests" used `params.id`. `params` is a Promise and must be unwrapped with `await` or `React.use()` before accessing its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (src/app/api/hr/initiatives/[id]/quests/route.ts:16:37)
+  14 |         }
+  15 |
+> 16 |         const initiativeId = params.id;
+     |                                     ^
+  17 |
+  18 |         const quests = await prisma.quest.findMany({
+  19 |             where: { initiativeId },
+Error fetching initiative quests: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].quest.findMany()` invocation in
+/Users/tara/GOPEAK ERP/gopeakerp/.next/dev/server/chunks/[root-of-the-server]__ce2b2f11._.js:236:165
+
+  233     });
+  234 }
+  235 const initiativeId = params.id;
+→ 236 const quests = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].quest.findMany({
+        where: {
+          initiativeId: undefined
+        },
+        include: {
+          assignedTo: {
+            select: {
+              user: {
+                select: {
+                  name: true,
+                  image: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          orderIndex: "asc",
+          ~~~~~~~~~~
+      ?   id?: SortOrder,
+      ?   title?: SortOrder,
+      ?   description?: SortOrder | SortOrderInput,
+      ?   expReward?: SortOrder,
+      ?   coinReward?: SortOrder,
+      ?   deadline?: SortOrder | SortOrderInput,
+      ?   assignedToId?: SortOrder | SortOrderInput,
+      ?   creatorId?: SortOrder,
+      ?   initiativeId?: SortOrder | SortOrderInput,
+      ?   status?: SortOrder,
+      ?   createdAt?: SortOrder,
+      ?   updatedAt?: SortOrder,
+      ?   assignedTo?: EmployeeOrderByWithRelationInput,
+      ?   creator?: UserOrderByWithRelationInput,
+      ?   initiative?: InitiativeOrderByWithRelationInput,
+      ?   logs?: QuestLogOrderByRelationAggregateInput
+        }
+      })
+
+Unknown argument `orderIndex`. Available options are marked with ?.
+    at <unknown> (src/app/api/hr/initiatives/[id]/quests/route.ts:18:43)
+    at async GET (src/app/api/hr/initiatives/[id]/quests/route.ts:18:24)
+  16 |         const initiativeId = params.id;
+  17 |
+> 18 |         const quests = await prisma.quest.findMany({
+     |                                           ^
+  19 |             where: { initiativeId },
+  20 |             include: {
+  21 |                 assignedTo: { {
+  clientVersion: '6.19.2'
+}
+ GET /api/hr/initiatives/cmmcdc546000bsbycj6vyzupi/quests 500 in 172ms (compile: 7ms, render: 165ms)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+✓ Compiled in 84ms
+ GET /dashboard 200 in 974ms (compile: 10ms, proxy.ts: 61ms, render: 903ms)
+ GET /api/auth/session 200 in 53ms (compile: 42ms, render: 11ms)
+ GET /api/notifications 200 in 171ms (compile: 6ms, render: 165ms)
+ GET /api/notifications 200 in 215ms (compile: 10ms, render: 206ms)
