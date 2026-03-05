@@ -3,7 +3,12 @@
 import { useState } from "react";
 import useSWR from "swr";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+    const res = await fetch(url);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'An error occurred while fetching the data.');
+    return data;
+};
 
 const AVAILABLE_MODULES = [
     { key: "HR", label: "ระบบบุคคล (รายชื่อ, แผนก)" },

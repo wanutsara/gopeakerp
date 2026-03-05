@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+    const res = await fetch(url);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'An error occurred while fetching the data.');
+    return data;
+};
 
 export default function EditEmployeePage() {
     const router = useRouter();
@@ -329,7 +334,14 @@ export default function EditEmployeePage() {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">อีเมล (ล็อกอิน)</label>
-                                        <input type="email" value={formData.email} disabled className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 text-gray-500 rounded-xl cursor-not-allowed" />
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            disabled={session?.user?.role !== 'OWNER' && session?.user?.role !== 'MANAGER'}
+                                            className={`w-full px-4 py-2.5 border rounded-xl outline-none transition ${session?.user?.role !== 'OWNER' && session?.user?.role !== 'MANAGER' ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-50 border-gray-200 text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'}`}
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">ตั้งรหัสผ่านใหม่ (ปล่อยว่างถ้าไม่เปลี่ยน)</label>

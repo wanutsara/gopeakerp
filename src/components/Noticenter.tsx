@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import useSWR from "swr";
 import { formatDistanceToNow } from "date-fns";
 import { th } from "date-fns/locale";
-import { BellIcon, CheckCircleIcon, InformationCircleIcon, ClockIcon, MegaphoneIcon } from "@heroicons/react/24/outline";
+import { BellIcon, CheckCircleIcon, InformationCircleIcon, ClockIcon, MegaphoneIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -56,11 +56,14 @@ export default function Noticenter() {
             } else {
                 router.push('/hr/expenses');
             }
+        } else if (notification.type === 'SYSTEM' && notification.title && notification.title.includes('AI Extraction')) {
+            router.push(`/oms/import?jobId=${notification.referenceId}`);
         }
         // Could handle other types like ANNOUNCEMENT
     };
 
-    const getIcon = (type: string) => {
+    const getIcon = (type: string, title?: string) => {
+        if (type === 'SYSTEM' && title?.includes('AI')) return <SparklesIcon className="w-5 h-5 text-fuchsia-500" />;
         switch (type) {
             case 'ATTENDANCE_REQUEST': return <ClockIcon className="w-5 h-5 text-blue-500" />;
             case 'ANNOUNCEMENT': return <MegaphoneIcon className="w-5 h-5 text-purple-500" />;
@@ -112,7 +115,7 @@ export default function Noticenter() {
                                     className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors flex gap-3 items-start ${!notif.isRead ? 'bg-blue-50/30' : ''}`}
                                 >
                                     <div className="mt-0.5 flex-shrink-0">
-                                        {getIcon(notif.type)}
+                                        {getIcon(notif.type, notif.title)}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className={`text-sm ${!notif.isRead ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>

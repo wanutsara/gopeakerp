@@ -7,9 +7,22 @@ import { useState, useEffect } from "react";
 const navigation = [
     { name: "แดชบอร์ด", href: "/dashboard", icon: "📊" },
     {
+        name: "ระบบพนักงาน (ESS)",
+        icon: "🧑‍💻",
+        children: [
+            { name: "แผงควบคุมหลัก (My ESS)", href: "/ess/dashboard" },
+            { name: "ศูนย์บัญชาการ (Center of Work)", href: "/ess/workspace" },
+            { name: "ลานรับภารกิจ (Quest Board)", href: "/ess/quests" },
+            { name: "เส้นทางเป้าหมาย (My OKRs)", href: "/ess/goals" },
+            { name: "สเตตัสตัวละคร (RPG Profile)", href: "/ess/profile" }
+        ]
+    },
+    {
         name: "ฝ่ายขาย / CRM",
         icon: "💼",
         children: [
+            { name: "ฐานข้อมูลลูกค้า (Customers)", href: "/crm/customers" },
+            { name: "ตรวจสอบรายชื่อซ้ำ (Resolution)", href: "/crm/resolution" },
             { name: "ใบเสนอราคา (Quotations)", href: "/crm/quotations" },
         ]
     },
@@ -17,8 +30,16 @@ const navigation = [
         name: "จัดการออร์เดอร์ (OMS)",
         icon: "📦",
         children: [
+            { name: "ยอดขายรายวัน (Daily Revenue)", href: "/oms/orders" },
             { name: "คลังสินค้ากลาง (Products)", href: "/oms/products" },
             { name: "นำเข้าออร์เดอร์ (Import)", href: "/oms/import" },
+        ]
+    },
+    {
+        name: "การตลาด (Marketing)",
+        icon: "🎯",
+        children: [
+            { name: "ระบุค่าโฆษณา (Ad Spend Log)", href: "/marketing/ads" },
         ]
     },
     {
@@ -35,12 +56,17 @@ const navigation = [
         children: [
             { name: "ประกาศบอร์ดข่าว", href: "/hr/announcements" },
             { name: "บัญชาการลงเวลา (The Pulse)", href: "/hr/attendance" },
+            { name: "ผังโครงสร้าง (Org Chart)", href: "/hr/org-chart" },
             { name: "รายชื่อพนักงาน", href: "/hr" },
             { name: "แผนก (Departments)", href: "/hr/departments" },
             { name: "เงินเดือน (Payroll)", href: "/hr/payroll" },
             { name: "วันลา (Leaves)", href: "/hr/leave" },
             { name: "ล่วงเวลา (OT)", href: "/hr/overtime" },
             { name: "เบิกจ่าย (Expenses)", href: "/hr/expenses" },
+            { name: "จัดสรรภารกิจ (Quest Master)", href: "/hr/quests" },
+            { name: "ฐานข้อมูลตำแหน่งงาน", href: "/hr/settings/positions" },
+            { name: "ศูนย์รวมเป้าหมาย (OKR Center)", href: "/hr/goals" },
+            { name: "ผังเป้าหมายองค์กร (Alignment Tree)", href: "/hr/alignment" },
             { name: "ตั้งค่าระบบ (Settings)", href: "/hr/settings" },
         ]
     },
@@ -49,12 +75,8 @@ const navigation = [
         icon: "⚙️",
         children: [
             { name: "จัดการสิทธิ์ใช้งาน (Roles)", href: "/settings/roles" },
+            { name: "ตั้งค่าองค์กร (Company)", href: "/settings/system" },
         ]
-    },
-    {
-        name: "ลงเวลาของฉัน (My ESS)",
-        href: "/ess/dashboard",
-        icon: "⏱️"
     }
 ];
 
@@ -68,8 +90,10 @@ export default function Sidebar() {
         for (const item of navigation) {
             if (item.children && item.children.some(child => pathname.startsWith(child.href) && child.href !== "/hr" || (child.href === "/hr" && (pathname === "/hr" || pathname.startsWith("/hr/create") || pathname.match(/^\/hr\/(?!attendance|departments|payroll|leave|settings)[a-zA-Z0-9_-]+$/))))) {
                 initial[item.name] = true;
-            } else if (item.children && pathname.startsWith('/hr')) {
-                initial[item.name] = true; // fallback
+            } else if (item.children && item.name === "ระบบบุคคล (HR)" && pathname.startsWith('/hr')) {
+                initial[item.name] = true;
+            } else if (item.children && item.name === "ระบบพนักงาน (ESS)" && pathname.startsWith('/ess')) {
+                initial[item.name] = true;
             }
         }
         return initial;

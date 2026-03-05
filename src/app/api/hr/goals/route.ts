@@ -1,73 +1,92 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/lib/rbac";
-import { revalidatePath } from "next/cache";
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(request: Request) {
     try {
-        await requirePermission("HR", "READ");
-        const url = new URL(request.url);
-        const employeeId = url.searchParams.get("employeeId");
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
-        const goals = await prisma.employeeGoal.findMany({
-            where: employeeId ? { employeeId } : undefined,
+        if (session.user.role !== 'OWNER' && session.user.role !== 'MANAGER') {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        const unparsedUrl = new URL(request.url);
+        const year = unparsedUrl.searchParams.get('year') || new Date().getFullYear().toString();
+
+        const objectives = await prisma.okrObjective.findMany({
+            where: { year: parseInt(year) },
             include: {
-                employee: { select: { id: true, user: { select: { name: true } } } }
+                keyResults: {
+                    include: {
+                        employee: { select: { user: { select: { name: true, image: true } } } },
+                        initiatives: {
+                            include: {
+                                owner: { select: { user: { select: { name: true, image: true } } } }
+                            }
+                        }
+                    }
+                }
             },
             orderBy: { createdAt: 'desc' }
         });
 
-        return NextResponse.json(goals);
+        return NextResponse.json(objectives);
     } catch (error) {
-        console.error("Error fetching goals:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        console.error('Error fetching OKRs:', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 
 export async function POST(request: Request) {
     try {
-        await requirePermission("HR", "WRITE");
-        const body = await request.json();
-        const { employeeId, title, description, targetValue, unit, deadline } = body;
-
-        if (!employeeId || !title || targetValue === undefined) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const newGoal = await prisma.employeeGoal.create({
+        if (session.user.role !== 'OWNER' && session.user.role !== 'MANAGER') {
+            return NextResponse.json({ error: 'Only OWNER and MANAGER can create OKRs' }, { status: 403 });
+        }
+
+        const body = await request.json();
+        const { title, description, year, quarter, keyResults } = body;
+
+        if (!title) {
+            return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+        }
+
+        const newObjective = await prisma.okrObjective.create({
             data: {
-                employeeId,
                 title,
                 description,
-                targetValue: parseFloat(targetValue),
-                currentValue: 0,
-                unit: unit || "%",
-                deadline: deadline ? new Date(deadline) : null,
-                status: "IN_PROGRESS"
+                year: parseInt(year) || new Date().getFullYear(),
+                quarter: parseInt(quarter) || 1,
             }
         });
 
-        // Notify employee
-        const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
-        if (employee) {
-            await prisma.notification.create({
-                data: {
-                    userId: employee.userId,
-                    title: `🎯 เป้าหมายใหม่: ${title}`,
-                    message: `HR ได้ตั้งเป้าหมาย หรือ KPI ใหม่ให้คุณ เข้าไปดูรายละเอียดได้เลย`,
-                    type: "SYSTEM"
-                }
+        if (keyResults && Array.isArray(keyResults) && keyResults.length > 0) {
+            const krPromises = keyResults.map(async (kr: any) => {
+                if (!kr.title) return null;
+                return prisma.okrKeyResult.create({
+                    data: {
+                        objectiveId: newObjective.id,
+                        title: kr.title,
+                        targetValue: Number(kr.targetValue) || 100,
+                        unit: kr.unit || '%',
+                        employeeId: kr.employeeId || null,
+                    }
+                });
             });
+            await Promise.all(krPromises);
         }
 
-        revalidatePath("/hr");
-        revalidatePath("/hr/goals");
-
-        return NextResponse.json(newGoal, { status: 201 });
+        return NextResponse.json(newObjective, { status: 201 });
     } catch (error) {
-        console.error("Error creating goal:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        console.error('Error creating OKR:', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

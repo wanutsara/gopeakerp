@@ -32,7 +32,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         const { id } = await params;
         const body = await request.json();
         const {
-            name, role, userRoleId, password, employeeType, position, wageRate, status, bankAccount, departmentId, image,
+            name, email, role, userRoleId, password, employeeType, position, wageRate, status, bankAccount, departmentId, image,
             idCardNumber, dob, gender, address, emergencyContact, emergencyRelation,
             mbti, enneagram, tshirtSize, foodAllergies,
             startDate, probationEndDate, managerId, phoneNumber,
@@ -74,7 +74,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                 include: { user: true },
             });
 
-            if (name !== undefined || role !== undefined || userRoleId !== undefined || password) {
+            if (name !== undefined || email !== undefined || role !== undefined || userRoleId !== undefined || password) {
                 let hashedPassword;
                 if (password) {
                     hashedPassword = await bcrypt.hash(password, 10);
@@ -84,6 +84,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                     where: { id: emp.userId },
                     data: {
                         ...(name !== undefined && { name }),
+                        ...(email !== undefined && { email }),
                         ...(role !== undefined && { role }),
                         ...(userRoleId !== undefined && { userRoleId: userRoleId || null }),
                         ...(hashedPassword && { password: hashedPassword }),

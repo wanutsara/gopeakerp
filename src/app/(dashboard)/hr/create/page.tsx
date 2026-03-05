@@ -5,7 +5,12 @@ import Link from "next/link";
 import useSWR from "swr";
 import { PhotoIcon, UserCircleIcon } from "@heroicons/react/24/outline";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+    const res = await fetch(url);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'An error occurred while fetching the data.');
+    return data;
+};
 
 export default function CreateEmployeePage() {
     const router = useRouter();

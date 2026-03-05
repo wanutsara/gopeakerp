@@ -6,7 +6,12 @@ import { formatDistanceToNow } from "date-fns";
 import { th } from "date-fns/locale";
 import { MegaphoneIcon, UsersIcon, GlobeAsiaAustraliaIcon } from "@heroicons/react/24/outline";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = async (url: string) => {
+    const res = await fetch(url);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'An error occurred while fetching the data.');
+    return data;
+};
 
 export default function AnnouncementsPage() {
     const { data: deptsData } = useSWR('/api/hr/departments', fetcher);

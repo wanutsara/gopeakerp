@@ -25,14 +25,20 @@ model User {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  employee      Employee?
-  activityLogs  ActivityLog[]
-  notifications Notification[]
-  announcements Announcement[]
+  employee             Employee?
+  activityLogs         ActivityLog[]
+  notifications        Notification[]
+  announcements        Announcement[]
   reviewedTimeRequests TimeAdjustmentRequest[]
-  
-  sentKudos            Kudos[] @relation("SentKudos")
+
+  sentKudos                Kudos[]                   @relation("SentKudos")
   announcementInteractions AnnouncementInteraction[]
+
+  // Phase 16
+  createdQuests Quest[] @relation("CreatedQuests")
+
+  // Phase 22: Async AI Import Jobs
+  importJobs ImportJob[]
 }
 
 model UserRole {
@@ -128,20 +134,36 @@ model Employee {
   customWorkStart String?
   customWorkEnd   String?
 
-  attendances   Attendance[]
-  leaveRequests LeaveRequest[]
-  leaveBalances LeaveBalance[]
-  payrolls      Payroll[]
-  documents        EmployeeDocument[]
-  approvals        ExpenseRequest[] @relation("ExpenseApprover")
-  requests         ExpenseRequest[] @relation("ExpenseRequestor")
-  timeLogs         TimeLog[]
-  timeAdjustments  TimeAdjustmentRequest[]
-  
+  attendances     Attendance[]
+  leaveRequests   LeaveRequest[]
+  leaveBalances   LeaveBalance[]
+  payrolls        Payroll[]
+  documents       EmployeeDocument[]
+  approvals       ExpenseRequest[]        @relation("ExpenseApprover")
+  requests        ExpenseRequest[]        @relation("ExpenseRequestor")
+  timeLogs        TimeLog[]
+  timeAdjustments TimeAdjustmentRequest[]
+
   moods            EmployeeMood[]
-  receivedKudos    Kudos[] @relation("ReceivedKudos")
+  receivedKudos    Kudos[]           @relation("ReceivedKudos")
   goals            EmployeeGoal[]
   overtimeRequests OvertimeRequest[]
+
+  // Phase 16: Core HR & Gamification Hooks
+  jobPositionId String?
+  jobPosition   JobPosition? @relation(fields: [jobPositionId], references: [id], onDelete: SetNull)
+  level         Int          @default(1)
+  exp           Int          @default(0)
+  coins         Int          @default(0)
+
+  skills         EmployeeSkill[]
+  assignedQuests Quest[]         @relation("AssignedQuests")
+  questLogs      QuestLog[]
+  okrKeyResults  OkrKeyResult[]
+
+  // Initiatives (Action Plans)
+  ownedInitiatives        Initiative[] @relation("InitiativeOwner")
+  collaboratedInitiatives Initiative[] @relation("InitiativeCollaborators")
 }
 
 enum EmployeeType {
@@ -171,22 +193,22 @@ model LeaveRequest {
   employeeId String
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-  type          LeaveType
-  startDate     DateTime       @db.Date
-  endDate       DateTime       @db.Date
-  
+  type      LeaveType
+  startDate DateTime  @db.Date
+  endDate   DateTime  @db.Date
+
   // Phase 15: Hourly Leave Extensions
-  startTime     String?        // e.g. "09:00"
-  endTime       String?        // e.g. "12:00"
-  requestedHours Float         @default(8)   // Used to deduct from `LeaveBalance` precisely
+  startTime      String? // e.g. "09:00"
+  endTime        String? // e.g. "12:00"
+  requestedHours Float   @default(8) // Used to deduct from `LeaveBalance` precisely
 
   reason        String?
-  attachmentUrl String?        // For medical certificates
+  attachmentUrl String? // For medical certificates
   status        ApprovalStatus @default(PENDING)
-  approvedBy    String?        // Store user ID who approved
-  
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  approvedBy    String? // Store user ID who approved
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum LeaveType {
@@ -218,13 +240,17 @@ model LeaveBalance {
 }
 
 model CompanySetting {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   defaultLat       Float?
   defaultLng       Float?
-  defaultRadius    Float    @default(100)
-  defaultWorkStart String   @default("09:00")
-  defaultWorkEnd   String   @default("18:00")
-  updatedAt        DateTime @updatedAt
+  defaultRadius    Float     @default(100)
+  defaultWorkStart String    @default("09:00")
+  defaultWorkEnd   String    @default("18:00")
+  
+  // Phase 29: Global Settings & Data Architecture
+  financeGoLiveDate DateTime?
+  
+  updatedAt        DateTime  @updatedAt
 }
 
 model TimeLog {
@@ -250,21 +276,21 @@ model TimeLog {
 // ----------------------------------------------------------------------
 
 model OvertimeRequest {
-  id              String   @id @default(cuid())
-  employeeId      String
-  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
   date            DateTime @db.Date
-  startTime       String   // e.g. "18:00"
-  endTime         String   // e.g. "21:00"
+  startTime       String // e.g. "18:00"
+  endTime         String // e.g. "21:00"
   calculatedHours Float
   multiplier      Float    @default(1.5) // Standard 1.5x OT Rate
   reason          String?
-  
-  status          ApprovalStatus @default(PENDING)
-  approvedBy      String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+
+  status     ApprovalStatus @default(PENDING)
+  approvedBy String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 }
 
 model Payroll {
@@ -319,19 +345,72 @@ enum DocumentType {
 // CRM Module
 // ----------------------------------------------------------------------
 model Customer {
-  id      String  @id @default(cuid())
-  name    String
-  phone   String?
-  address String?
-  source  String? // Facebook, Shopee, TikTok
+  id          String  @id @default(cuid())
+  name        String
+  profileName String? // The social media handle (e.g. Line Display Name, FB Name)
+  phone       String?
+  address     String?
+
+  // Advanced Geographic Segmentation
+  province    String?
+  district    String?
+  subdistrict String?
+  postalCode  String?
+
+  source String? // Facebook, Shopee, TikTok
 
   tags       String? // e.g "VIP, Returning" JSON string or comma separated
   totalSpent Float   @default(0)
 
+  // AI Caching
+  aiPsychology String?
+  aiNextAction String?
+  aiChurnRisk  String?
+  aiLastSync   DateTime?
+
+  isArchived Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  orders Order[]
+  orders           Order[]
+  aliases          CustomerAlias[]
+  resolvingMatches ResolutionMatch[] @relation("resolvingCustomer")
+  duplicateMatches ResolutionMatch[] @relation("duplicateCustomer")
+}
+
+model CustomerAlias {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  name        String?
+  profileName String?
+  phone       String?
+  source      String?
+
+  createdAt DateTime @default(now())
+}
+
+model ResolutionMatch {
+  id               String   @id @default(cuid())
+  masterCustomerId String
+  masterCustomer   Customer @relation("resolvingCustomer", fields: [masterCustomerId], references: [id], onDelete: Cascade)
+
+  duplicateCustomerId String
+  duplicateCustomer   Customer @relation("duplicateCustomer", fields: [duplicateCustomerId], references: [id], onDelete: Cascade)
+
+  confidenceScore Float // 0.0 to 1.0 Jaro-Winkler/LLM Score
+  status          MatchStatus @default(PENDING) // PENDING, MERGED, REJECTED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MatchStatus {
+  PENDING
+  MERGED
+  REJECTED
 }
 
 // ----------------------------------------------------------------------
@@ -412,26 +491,26 @@ model PreorderItem {
 // Order Management Module (OMS) & Inventory Ledger
 // ----------------------------------------------------------------------
 enum MovementCategory {
-  INBOUND       // รับของเข้าคลัง (Supplier/Restock)
-  OUTBOUND      // ตัดยอดขายอัตโนมัติ (Sales/E-Commerce)
-  ADJUSTMENT    // อัปเดตยอดจริง (Cycle Count/Damage/Lost/Audit)
-  RETURN        // ลูกค้าตีของกลับ
+  INBOUND // รับของเข้าคลัง (Supplier/Restock)
+  OUTBOUND // ตัดยอดขายอัตโนมัติ (Sales/E-Commerce)
+  ADJUSTMENT // อัปเดตยอดจริง (Cycle Count/Damage/Lost/Audit)
+  RETURN // ลูกค้าตีของกลับ
 }
 
 model InventoryLog {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  type            MovementCategory 
-  quantityChanged Int      // Positive (+) or Negative (-)
-  balanceAfter    Int      // The snapshot of stock after this movement
-  
-  reference       String?  // PlatformOrderId, PO ID, etc.
-  notes           String?  // User manual notes or systemic auto-notes
-  
-  createdBy       String?  // Which employee/system triggered this log?
-  createdAt       DateTime @default(now())
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  type            MovementCategory
+  quantityChanged Int // Positive (+) or Negative (-)
+  balanceAfter    Int // The snapshot of stock after this movement
+
+  reference String? // PlatformOrderId, PO ID, etc.
+  notes     String? // User manual notes or systemic auto-notes
+
+  createdBy String? // Which employee/system triggered this log?
+  createdAt DateTime @default(now())
 
   @@index([productId])
   @@index([type])
@@ -506,23 +585,23 @@ model OrderItem {
 // Financial Module
 // ----------------------------------------------------------------------
 model Transaction {
-  id               String               @id @default(uuid())
-  type             TransactionType
-  amount           Float                @default(0) // Platform currency
-  amountTHB        Float                @default(0) // Converted to THB
-  date             DateTime             @default(now())
-  category         String? // e.g., "AD_SPEND", "SALES_REVENUE", "PAYROLL", "PROCUREMENT"
-  description      String?
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @default(now()) @updatedAt
+  id          String          @id @default(uuid())
+  type        TransactionType
+  amount      Float           @default(0) // Platform currency
+  amountTHB   Float           @default(0) // Converted to THB
+  date        DateTime        @default(now())
+  category    String? // e.g., "AD_SPEND", "SALES_REVENUE", "PAYROLL", "PROCUREMENT"
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @default(now()) @updatedAt
 
-  expenseRequestId String?              @unique
-  expenseRequest   ExpenseRequest?      @relation(fields: [expenseRequestId], references: [id])
+  expenseRequestId String?         @unique
+  expenseRequest   ExpenseRequest? @relation(fields: [expenseRequestId], references: [id])
 
-  payrollId        String?              @unique
-  payroll          Payroll?             @relation(fields: [payrollId], references: [id])
+  payrollId String?  @unique
+  payroll   Payroll? @relation(fields: [payrollId], references: [id])
 
-  reconciliations  OrderReconciliation[]
+  reconciliations OrderReconciliation[]
 }
 
 model OrderReconciliation {
@@ -556,44 +635,44 @@ enum ExpenseStatus {
 }
 
 model ExpenseRequest {
-  id            String          @id @default(uuid())
-  title         String
-  description   String?
-  amount        Float           @default(0)
-  status        ExpenseStatus   @default(PENDING)
-  expectedDate  DateTime?       
-  category      String?         // e.g. "OFFICE_SUPPLIES", "MARKETING", "INVENTORY"
-  vendorName    String?
-  receiptUrl    String?
+  id           String        @id @default(uuid())
+  title        String
+  description  String?
+  amount       Float         @default(0)
+  status       ExpenseStatus @default(PENDING)
+  expectedDate DateTime?
+  category     String? // e.g. "OFFICE_SUPPLIES", "MARKETING", "INVENTORY"
+  vendorName   String?
+  receiptUrl   String?
 
-  requestorId   String
-  requestor     Employee        @relation("ExpenseRequestor", fields: [requestorId], references: [id])
-  
+  requestorId String
+  requestor   Employee @relation("ExpenseRequestor", fields: [requestorId], references: [id])
+
   // Optional depending on if tied to a specific department cost-center
-  departmentId  String?
-  department    Department?     @relation(fields: [departmentId], references: [id])
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
 
-  approverId    String?
-  approver      Employee?       @relation("ExpenseApprover", fields: [approverId], references: [id])
+  approverId String?
+  approver   Employee? @relation("ExpenseApprover", fields: [approverId], references: [id])
 
-  items         ExpenseItem[]
-  transaction   Transaction?    
+  items       ExpenseItem[]
+  transaction Transaction?
 
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ExpenseItem {
   id               String         @id @default(uuid())
   expenseRequestId String
   expenseRequest   ExpenseRequest @relation(fields: [expenseRequestId], references: [id], onDelete: Cascade)
-  
-  itemName         String
-  quantity         Int            @default(1)
-  price            Float          @default(0)
-  
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+
+  itemName String
+  quantity Int    @default(1)
+  price    Float  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum Currency {
@@ -649,66 +728,66 @@ model ActivityLog {
 // ----------------------------------------------------------------------
 
 model Notification {
-  id          String   @id @default(cuid())
-  userId      String   // The User who receives this notification
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String // The User who receives this notification
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   title       String
   message     String
-  type        String   @default("SYSTEM") // e.g. "ATTENDANCE_REQUEST", "ANNOUNCEMENT", "PAYROLL"
-  isRead      Boolean  @default(false)
-  referenceId String?  // Optional ID for deep linking (e.g. ID of the specific Request)
-  
-  createdAt   DateTime @default(now())
+  type        String  @default("SYSTEM") // e.g. "ATTENDANCE_REQUEST", "ANNOUNCEMENT", "PAYROLL"
+  isRead      Boolean @default(false)
+  referenceId String? // Optional ID for deep linking (e.g. ID of the specific Request)
+
+  createdAt DateTime @default(now())
 }
 
 model TimeAdjustmentRequest {
-  id                String   @id @default(cuid())
-  employeeId        String
-  employee          Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  
-  date              DateTime @db.Date // The date they want to edit
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  date              DateTime  @db.Date // The date they want to edit
   requestedCheckIn  DateTime?
   requestedCheckOut DateTime?
   reason            String
-  
-  status            ApprovalStatus @default(PENDING) // PENDING, APPROVED, REJECTED
-  
-  reviewerId        String?  // The HR/Manager who reviewed it
-  reviewer          User?    @relation(fields: [reviewerId], references: [id])
-  reviewedAt        DateTime?
-  adminComment      String?
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+
+  status ApprovalStatus @default(PENDING) // PENDING, APPROVED, REJECTED
+
+  reviewerId   String? // The HR/Manager who reviewed it
+  reviewer     User?     @relation(fields: [reviewerId], references: [id])
+  reviewedAt   DateTime?
+  adminComment String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Announcement {
-  id                 String   @id @default(cuid())
-  title              String
-  content            String
-  
-  authorId           String   // The User who posted it
-  author             User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  
-  isGlobal           Boolean  @default(true) // If true, sent to everyone
-  targetDepartmentId String?  // If false, sent to specific department
+  id      String @id @default(cuid())
+  title   String
+  content String
+
+  authorId String // The User who posted it
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  isGlobal           Boolean     @default(true) // If true, sent to everyone
+  targetDepartmentId String? // If false, sent to specific department
   department         Department? @relation(fields: [targetDepartmentId], references: [id], onDelete: SetNull)
-  
-  isActive           Boolean  @default(true)
-  
+
+  isActive Boolean @default(true)
+
   // Phase 13 Engagement Additions
-  type               String?   @default("NEWS") // "NEWS", "EVENT", "POLL"
-  eventDate          DateTime? // If type="EVENT", when does this happen?
-  pollOptions        Json?     // If type="POLL", ["Pizza", "KFC"]
-  interactions       AnnouncementInteraction[]
-  
+  type         String?                   @default("NEWS") // "NEWS", "EVENT", "POLL"
+  eventDate    DateTime? // If type="EVENT", when does this happen?
+  pollOptions  Json? // If type="POLL", ["Pizza", "KFC"]
+  interactions AnnouncementInteraction[]
+
   // Phase 14: Lifecycle Management
-  publishAt          DateTime? // Optional start date for visibility
-  expireAt           DateTime? // Optional end date for visibility
-  
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  publishAt DateTime? // Optional start date for visibility
+  expireAt  DateTime? // Optional end date for visibility
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ----------------------------------------------------------------------
@@ -719,12 +798,12 @@ model EmployeeMood {
   id         String   @id @default(cuid())
   employeeId String
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  date       DateTime @db.Date 
-  mood       MoodType 
+  date       DateTime @db.Date
+  mood       MoodType
   note       String?
   createdAt  DateTime @default(now())
 
-  @@unique([employeeId, date]) 
+  @@unique([employeeId, date])
 }
 
 enum MoodType {
@@ -741,24 +820,24 @@ model Kudos {
   sender     User     @relation("SentKudos", fields: [senderId], references: [id], onDelete: Cascade)
   receiverId String
   receiver   Employee @relation("ReceivedKudos", fields: [receiverId], references: [id], onDelete: Cascade)
-  badgeType  String   @default("THANK_YOU") 
+  badgeType  String   @default("THANK_YOU")
   message    String
   createdAt  DateTime @default(now())
 }
 
 model EmployeeGoal {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   employeeId   String
-  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   title        String
   description  String?
-  currentValue Float    @default(0)
+  currentValue Float      @default(0)
   targetValue  Float
-  unit         String   @default("%")
-  deadline     DateTime? @db.Date
+  unit         String     @default("%")
+  deadline     DateTime?  @db.Date
   status       GoalStatus @default(IN_PROGRESS)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 enum GoalStatus {
@@ -773,8 +852,241 @@ model AnnouncementInteraction {
   announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
   userId         String
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  action         String       // "RSVP_YES", "VOTE_1", "LIKE"
+  action         String // "RSVP_YES", "VOTE_1", "LIKE"
   createdAt      DateTime     @default(now())
 
   @@unique([announcementId, userId, action])
+}
+
+// ----------------------------------------------------------------------
+// Phase 16: Gamification & Core HR
+// ----------------------------------------------------------------------
+
+model JobPosition {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  minSalary   Float   @default(0)
+  maxSalary   Float   @default(0)
+
+  employees    Employee[]
+  competencies JobPositionCompetency[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Competency {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  positions JobPositionCompetency[]
+  skills    EmployeeSkill[]
+}
+
+model JobPositionCompetency {
+  id            String @id @default(cuid())
+  jobPositionId String
+  competencyId  String
+  requiredLevel Int    @default(1) // 1-5 Scale
+
+  jobPosition JobPosition @relation(fields: [jobPositionId], references: [id], onDelete: Cascade)
+  competency  Competency  @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@unique([jobPositionId, competencyId])
+}
+
+model EmployeeSkill {
+  id           String @id @default(cuid())
+  employeeId   String
+  competencyId String
+  currentLevel Int    @default(1)
+
+  employee   Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, competencyId])
+}
+
+enum InitiativeStatus {
+  PENDING
+  IN_PROGRESS
+  REVIEWING
+  COMPLETED
+  OVERDUE
+}
+
+enum InitiativeHealth {
+  ON_TRACK
+  AT_RISK
+  OFF_TRACK
+}
+
+model Initiative {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  status      InitiativeStatus @default(PENDING)
+  health      InitiativeHealth @default(ON_TRACK)
+  progress    Int              @default(0) // 0-100 Auto calculated
+
+  startDate DateTime
+  endDate   DateTime
+
+  expReward  Int @default(500)
+  coinReward Int @default(100)
+
+  keyResultId String
+  keyResult   OkrKeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+
+  ownerId String
+  owner   Employee @relation("InitiativeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  collaborators Employee[] @relation("InitiativeCollaborators")
+
+  quests Quest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Quest {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  expReward   Int       @default(10)
+  coinReward  Int       @default(0)
+  deadline    DateTime? @db.Date
+
+  assignedToId String?
+  assignedTo   Employee? @relation("AssignedQuests", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  creatorId String
+  creator   User   @relation("CreatedQuests", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  initiativeId String?
+  initiative   Initiative? @relation(fields: [initiativeId], references: [id], onDelete: SetNull)
+
+  status     QuestStatus @default(OPEN)
+  orderIndex Float       @default(0)
+  logs       QuestLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model QuestLog {
+  id         String @id @default(cuid())
+  questId    String
+  employeeId String // Who claimed/completed it
+
+  quest    Quest    @relation(fields: [questId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  status      QuestStatus @default(IN_PROGRESS)
+  completedAt DateTime?
+
+  @@unique([questId, employeeId])
+}
+
+enum QuestStatus {
+  OPEN
+  IN_PROGRESS
+  REVIEWING
+  COMPLETED
+  FAILED
+}
+
+model OkrObjective {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  year        Int
+  quarter     Int?
+
+  keyResults OkrKeyResult[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OkrKeyResult {
+  id          String       @id @default(cuid())
+  objectiveId String
+  objective   OkrObjective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+
+  title        String
+  targetValue  Float
+  currentValue Float  @default(0)
+  unit         String @default("%")
+
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  initiatives Initiative[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Marketing & Ad Spend Module (Dashboard Core)
+// ---------------------------------------------------------------------------
+
+model MarketingCampaign {
+  id       String @id @default(cuid())
+  name     String
+  platform String // e.g., "FACEBOOK", "GOOGLE", "TIKTOK"
+  status   String @default("ACTIVE") // ACTIVE, PAUSED, COMPLETED
+
+  dailyBudget Float @default(0)
+  totalSpend  Float @default(0)
+
+  startDate DateTime  @db.Date
+  endDate   DateTime? @db.Date
+
+  logs AdSpendLog[]
+}
+
+model AdSpendLog {
+  id         String            @id @default(cuid())
+  campaignId String
+  campaign   MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  date        DateTime @db.Date
+  spend       Float // Amount spent on this day
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  conversions Int      @default(0) // Mapped directly or inferred
+
+  createdAt DateTime @default(now())
+
+  @@unique([campaignId, date])
+}
+
+// ----------------------------------------------------------------------
+// Phase 22: Async AI Background Jobs
+// ----------------------------------------------------------------------
+model ImportJob {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fileName String
+  fileSize Int
+  status   JobStatus @default(PENDING) // PENDING, PROCESSING, COMPLETED, FAILED
+
+  errorLog   String?
+  resultJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
 }
