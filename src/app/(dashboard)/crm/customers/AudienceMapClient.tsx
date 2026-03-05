@@ -19,11 +19,12 @@ function MapUpdater({ onZoom }: { onZoom: (zoom: number) => void }) {
     return null;
 }
 
-const createClusterIcon = (count: number, label: string, level: 'COUNTRY' | 'PROVINCE' | 'DISTRICT') => {
+const createClusterIcon = (count: number, label: string, level: 'COUNTRY' | 'PROVINCE' | 'DISTRICT' | 'SUBDISTRICT') => {
     const colors = {
         COUNTRY: 'bg-indigo-600',
         PROVINCE: 'bg-fuchsia-600',
-        DISTRICT: 'bg-emerald-500'
+        DISTRICT: 'bg-emerald-500',
+        SUBDISTRICT: 'bg-amber-500'
     };
     const c = colors[level];
 
@@ -87,26 +88,52 @@ export default function AudienceMapClient({ customers }: AudienceMapProps) {
             });
         }
 
-        // Level 3: DISTRICT (Zoom >= 9)
-        const distGroups: Record<string, { count: number, prov: string }> = {};
+        // Level 3: DISTRICT (9 <= Zoom < 11)
+        if (zoom >= 9 && zoom < 11) {
+            const distGroups: Record<string, { count: number, prov: string }> = {};
+            customers.forEach(c => {
+                const p = c.province || 'Unknown Province';
+                const d = c.district || 'Unknown District';
+                const key = `${p}|${d}`;
+                if (!distGroups[key]) distGroups[key] = { count: 0, prov: p };
+                distGroups[key].count += 1;
+            });
+
+            return Object.entries(distGroups).map(([key, data]) => {
+                const [, dist] = key.split('|');
+                const [lat, lng] = getGeoCoordinate(data.prov, dist);
+                return {
+                    id: `DIST_${key}`,
+                    label: dist,
+                    count: data.count,
+                    lat,
+                    lng,
+                    level: 'DISTRICT' as const
+                };
+            });
+        }
+
+        // Level 4: SUBDISTRICT (Zoom >= 11)
+        const subGroups: Record<string, { count: number, prov: string, dist: string }> = {};
         customers.forEach(c => {
             const p = c.province || 'Unknown Province';
             const d = c.district || 'Unknown District';
-            const key = `${p}|${d}`;
-            if (!distGroups[key]) distGroups[key] = { count: 0, prov: p };
-            distGroups[key].count += 1;
+            const s = c.subdistrict || 'Unknown Subdistrict';
+            const key = `${p}|${d}|${s}`;
+            if (!subGroups[key]) subGroups[key] = { count: 0, prov: p, dist: d };
+            subGroups[key].count += 1;
         });
 
-        return Object.entries(distGroups).map(([key, data]) => {
-            const [, dist] = key.split('|');
-            const [lat, lng] = getGeoCoordinate(data.prov, dist);
+        return Object.entries(subGroups).map(([key, data]) => {
+            const [, , sub] = key.split('|');
+            const [lat, lng] = getGeoCoordinate(data.prov, data.dist, sub);
             return {
-                id: `DIST_${key}`,
-                label: dist,
+                id: `SUB_${key}`,
+                label: sub,
                 count: data.count,
                 lat,
                 lng,
-                level: 'DISTRICT' as const
+                level: 'SUBDISTRICT' as const
             };
         });
 
@@ -154,7 +181,8 @@ export default function AudienceMapClient({ customers }: AudienceMapProps) {
                 <div className="flex flex-col gap-1 text-[11px] font-bold text-gray-500">
                     <div className={zoom < 6 ? "text-indigo-600" : ""}>Level 1: Country Map</div>
                     <div className={zoom >= 6 && zoom < 9 ? "text-fuchsia-600" : ""}>Level 2: Provincial Map</div>
-                    <div className={zoom >= 9 ? "text-emerald-500" : ""}>Level 3: District Density</div>
+                    <div className={zoom >= 9 && zoom < 11 ? "text-emerald-500" : ""}>Level 3: District Sub-clusters</div>
+                    <div className={zoom >= 11 ? "text-amber-500" : ""}>Level 4: Subdistrict Density</div>
                 </div>
             </div>
         </div>

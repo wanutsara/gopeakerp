@@ -100,10 +100,11 @@ function hashString(str: string): number {
     return hash;
 }
 
-export function getGeoCoordinate(province: string, district?: string): [number, number] {
+export function getGeoCoordinate(province: string, district?: string, subdistrict?: string): [number, number] {
     const defaultCoords: [number, number] = [13.75, 100.50]; // Default to BKK roughly
     const provKey = province?.trim() || "";
     const distKey = district?.trim() || "";
+    const subKey = subdistrict?.trim() || "";
 
     let baseCoord = PROVINCE_COORDS[provKey];
 
@@ -117,15 +118,23 @@ export function getGeoCoordinate(province: string, district?: string): [number, 
         baseCoord = [lat, lng];
     }
 
-    // If district is provided, apply a small deterministic offset around the province center
-    // this creates a nice "cluster" effect of districts around the province marker when zoomed in
+    let finalCoord = [...baseCoord] as [number, number];
+
+    // DISTRICT: ±0.15 degrees offset max (~15km radius from Province Center)
     if (distKey) {
         const distHash = Math.abs(hashString(distKey));
-        // ±0.15 degrees offset max (~15km radius)
         const latOffset = ((distHash % 300) - 150) / 1000;
         const lngOffset = (((distHash * 7) % 300) - 150) / 1000;
-        return [baseCoord[0] + latOffset, baseCoord[1] + lngOffset];
+        finalCoord = [finalCoord[0] + latOffset, finalCoord[1] + lngOffset];
     }
 
-    return baseCoord;
+    // SUBDISTRICT: ±0.03 degrees max (~3km radius from District Center)
+    if (subKey) {
+        const subHash = Math.abs(hashString(subKey));
+        const latOffset = ((subHash % 60) - 30) / 1000;
+        const lngOffset = (((subHash * 11) % 60) - 30) / 1000;
+        finalCoord = [finalCoord[0] + latOffset, finalCoord[1] + lngOffset];
+    }
+
+    return finalCoord;
 }
