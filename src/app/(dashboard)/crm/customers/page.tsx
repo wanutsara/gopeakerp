@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { UsersIcon, MapPinIcon, CurrencyDollarIcon, StarIcon, MagnifyingGlassIcon, AdjustmentsHorizontalIcon, GlobeAsiaAustraliaIcon, PlusIcon } from '@heroicons/react/24/outline';
 import CustomerDrawer from './CustomerDrawer';
+import AudienceMap from './AudienceMap';
 
 export default function CustomerDirectoryPage() {
     const router = useRouter();
@@ -93,23 +94,29 @@ export default function CustomerDirectoryPage() {
 
             {/* Geographical Distribution Widget */}
             {geoStats.length > 0 && !selectedProvince && !search && (
-                <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
-                    <div className="flex items-center justify-between mb-6">
+                <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm flex flex-col gap-6 w-full relative z-0">
+                    <div className="flex items-center justify-between">
                         <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                             <GlobeAsiaAustraliaIcon className="w-6 h-6 text-fuchsia-500" />
-                            Audience Geography map
+                            Audience Geography Map
+                            <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-full ml-2 uppercase tracking-widest hidden md:inline-block">AI Spatial Engine</span>
                         </h3>
                     </div>
-                    <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar">
+
+                    {/* Interactive Zoomable Map */}
+                    <AudienceMap customers={customers} />
+
+                    {/* Quick Filters */}
+                    <div className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
                         {geoStats.map((stat, idx) => (
                             <button
                                 key={idx}
                                 onClick={() => setSelectedProvince(stat.province)}
-                                className="flex-shrink-0 bg-gray-50 border border-gray-100 hover:border-indigo-300 hover:bg-indigo-50 px-6 py-4 rounded-2xl transition-all text-left group"
+                                className="flex-shrink-0 bg-gray-50 border border-gray-100 hover:border-indigo-300 hover:bg-indigo-50 px-6 py-4 rounded-2xl transition-all text-left group min-w-[140px]"
                             >
                                 <div className="text-2xl font-black text-indigo-600 mb-1 group-hover:scale-110 transition-transform origin-left">{stat._count.id}</div>
                                 <div className="text-sm font-bold text-gray-700">{stat.province}</div>
-                                <div className="text-xs text-gray-400 font-medium">Customers</div>
+                                <div className="text-xs text-gray-400 font-medium uppercase tracking-widest mt-1">Customers</div>
                             </button>
                         ))}
                     </div>
