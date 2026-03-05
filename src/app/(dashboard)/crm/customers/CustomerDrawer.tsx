@@ -72,6 +72,60 @@ export default function CustomerDrawer({ isOpen, onClose, customerData, onSaved 
         }
     };
 
+    // Auto-extract geographical data from pasted raw address text
+    const handleAddressBlur = () => {
+        if (!address) return;
+
+        let current = address;
+        let extractedZip = postalCode;
+        let extractedSub = subdistrict;
+        let extractedDist = district;
+        let extractedProv = province;
+
+        // 1. Extract 5-digit postal code
+        const zipMatch = current.match(/(?:รหัสไปรษณีย์)?\s*\b([1-9][0-9]{4})\b/);
+        if (zipMatch) {
+            extractedZip = zipMatch[1];
+            current = current.replace(zipMatch[0], '');
+        }
+
+        // 2. Extract Province
+        const provMatch = current.match(/(?:จ\.|จังหวัด)\s*([ก-๙a-zA-Z]+)/);
+        if (provMatch) {
+            extractedProv = provMatch[1];
+            current = current.replace(provMatch[0], '');
+        } else if (current.match(/กรุงเทพมหานคร|กทม\.?/)) {
+            extractedProv = 'กรุงเทพมหานคร';
+            current = current.replace(/กรุงเทพมหานคร|กทม\.?/g, '');
+        }
+
+        // 3. Extract District
+        const distMatch = current.match(/(?:อ\.|อำเภอ|เขต)\s*([ก-๙a-zA-Z]+)/);
+        if (distMatch) {
+            extractedDist = distMatch[1];
+            current = current.replace(distMatch[0], '');
+        }
+
+        // 4. Extract Subdistrict
+        const subMatch = current.match(/(?:ต\.|ตำบล|แขวง)\s*([ก-๙a-zA-Z]+)/);
+        if (subMatch) {
+            extractedSub = subMatch[1];
+            current = current.replace(subMatch[0], '');
+        }
+
+        // Cleanup trailing spaces, commas, or floating symbols
+        current = current.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+
+        // Only update if we extracted something new successfully
+        if (current !== address) {
+            setAddress(current);
+            if (extractedZip) setPostalCode(extractedZip);
+            if (extractedProv) setProvince(extractedProv);
+            if (extractedDist) setDistrict(extractedDist);
+            if (extractedSub) setSubdistrict(extractedSub);
+        }
+    };
+
     if (!isOpen) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -194,13 +248,17 @@ export default function CustomerDrawer({ isOpen, onClose, customerData, onSaved 
                             </h3>
 
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Street Address (Haus, Soi, Road)</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">
+                                    Street Address (Haus, Soi, Road)
+                                    <span className="text-xs font-normal text-gray-400 ml-2">(Auto-splits on paste)</span>
+                                </label>
                                 <input
                                     type="text"
                                     value={address}
                                     onChange={e => setAddress(e.target.value)}
+                                    onBlur={handleAddressBlur}
                                     className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-2 focus:ring-fuchsia-500 outline-none transition-all"
-                                    placeholder="House No, Building, Street..."
+                                    placeholder="Paste full address here..."
                                 />
                             </div>
 
