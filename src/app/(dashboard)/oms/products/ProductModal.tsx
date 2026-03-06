@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { XMarkIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, PlusIcon, TrashIcon, PhotoIcon, CloudArrowUpIcon } from "@heroicons/react/24/outline";
 import useSWR from "swr";
 
 const CHANNELS = ["SHOPEE", "LAZADA", "TIKTOK", "LINESHOPPING", "FACEBOOK", "IG", "POS", "OTHER"];
@@ -9,6 +9,7 @@ export default function ProductModal({ isOpen, onClose, product, onSaved }: { is
         name: "", sku: "", costPrice: "", salePrice: "", stock: "", images: ""
     });
     const [loading, setLoading] = useState(false);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
 
     // Mappings state (only for edit mode)
     const [mappings, setMappings] = useState<any[]>(product?.channelProducts || []);
@@ -55,6 +56,29 @@ export default function ProductModal({ isOpen, onClose, product, onSaved }: { is
             alert(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleImageUpload = async (file: File) => {
+        if (!file) return;
+        setIsUploadingImage(true);
+        const uploadData = new FormData();
+        uploadData.append('file', file);
+        try {
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: uploadData
+            });
+            const data = await res.json();
+            if (res.ok && data.url) {
+                setFormData({ ...formData, images: data.url });
+            } else {
+                alert(data.error || 'Upload failed');
+            }
+        } catch (error) {
+            alert('Network error during upload');
+        } finally {
+            setIsUploadingImage(false);
         }
     };
 
@@ -129,6 +153,33 @@ export default function ProductModal({ isOpen, onClose, product, onSaved }: { is
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">สต๊อกเริ่มต้น</label>
                                 <input type="number" name="stock" value={formData.stock} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition" />
+                            </div>
+                            <div className="sm:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">รูปภาพสินค้า</label>
+                                <div className="flex items-center gap-4">
+                                    {formData.images ? (
+                                        <div className="relative group shrink-0">
+                                            <img src={formData.images} alt="Product" className="w-20 h-20 object-cover rounded-xl border border-gray-200 shadow-sm" />
+                                            <button type="button" onClick={() => setFormData({ ...formData, images: '' })} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600 scale-0 group-hover:scale-100 transition">
+                                                <XMarkIcon className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 shrink-0">
+                                            {isUploadingImage ? <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div> : <PhotoIcon className="w-6 h-6 text-gray-400" />}
+                                        </div>
+                                    )}
+                                    <div className="flex-1">
+                                        <label className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition cursor-pointer shadow-sm">
+                                            <CloudArrowUpIcon className="w-5 h-5 text-blue-500" />
+                                            {isUploadingImage ? 'กำลังอัปโหลด...' : 'อัปโหลดรูปภาพ (Cloudinary)'}
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                                                if (e.target.files && e.target.files[0]) handleImageUpload(e.target.files[0]);
+                                            }} disabled={isUploadingImage} />
+                                        </label>
+                                        <p className="text-xs text-gray-400 mt-1.5">รองรับ JPG, PNG, WEBP ขนาดไม่เกิน 5MB</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </form>

@@ -310,20 +310,54 @@ ${(rawData as string).substring(0, 100000)}
                     if (order.items && order.items.length > 0) {
                         for (const item of order.items) {
                             if (!item.sku) continue;
+                            const qtyNum = item.qty || 1;
                             let product = await prisma.product.findFirst({ where: { sku: item.sku } });
+
+                            const defaultLoc = await prisma.location.findFirst({ where: { isDefault: true } });
+
                             if (product) {
+                                // 1. Decrement Read-Only Aggregate
                                 await prisma.product.update({
                                     where: { id: product.id },
-                                    data: { stock: { decrement: item.qty || 1 } }
+                                    data: { stock: { decrement: qtyNum } }
                                 });
+
+                                // 2. Decrement Real Multi-Warehouse Level
+                                if (defaultLoc) {
+                                    const inv = await prisma.inventoryLevel.findUnique({
+                                        where: { productId_locationId: { productId: product.id, locationId: defaultLoc.id } }
+                                    });
+                                    if (inv) {
+                                        await prisma.inventoryLevel.update({
+                                            where: { id: inv.id },
+                                            data: { available: { decrement: qtyNum } }
+                                        });
+                                    } else {
+                                        await prisma.inventoryLevel.create({
+                                            data: {
+                                                productId: product.id,
+                                                locationId: defaultLoc.id,
+                                                available: -qtyNum
+                                            }
+                                        });
+                                    }
+                                }
                                 results.stockUpdated++;
                             } else {
-                                // Auto-create Missing SKU
+                                // Auto-create Missing SKU with Multi-Warehouse binding
                                 product = await prisma.product.create({
                                     data: {
                                         sku: item.sku,
                                         name: item.productName || `Auto-imported: ${item.sku}`,
-                                        stock: -(item.qty || 1) // Negative stock because we deduct it immediately
+                                        stock: -qtyNum, // Negative stock because we deduct it immediately
+                                        ...(defaultLoc && {
+                                            inventoryLevels: {
+                                                create: {
+                                                    locationId: defaultLoc.id,
+                                                    available: -qtyNum
+                                                }
+                                            }
+                                        })
                                     }
                                 });
                                 results.stockUpdated++;
@@ -331,15 +365,17 @@ ${(rawData as string).substring(0, 100000)}
                             }
 
                             // Always link OrderItem to the existing or newly created product
-                            await prisma.orderItem.create({
-                                data: {
-                                    orderId: dbOrder.id,
-                                    productId: product.id,
-                                    productName: item.productName || product.name || item.sku,
-                                    quantity: item.qty || 1,
-                                    price: item.price || 0,
-                                }
-                            });
+                            if (dbOrder && product) {
+                                await prisma.orderItem.create({
+                                    data: {
+                                        orderId: dbOrder.id, // Links dynamically to the parent dbOrder resolved outside the loop
+                                        productId: product.id,
+                                        productName: item.productName || product.name || item.sku,
+                                        quantity: qtyNum,
+                                        price: item.price || 0,
+                                    }
+                                });
+                            }
                         }
                     }
                 } catch (e: any) {

@@ -11,14 +11,10 @@ const fetcher = async (url: string) => {
 };
 
 const AVAILABLE_MODULES = [
-    { key: "HR", label: "ระบบบุคคล (รายชื่อ, แผนก)" },
-    { key: "PAYROLL", label: "ระบบเงินเดือน (Payroll)" },
-    { key: "LEAVE", label: "ระบบวันลา (Leave Requests)" },
-    { key: "CRM", label: "ลูกค้าสัมพันธ์ (CRM/Sales)" },
-    { key: "INVENTORY", label: "คลังสินค้า (Inventory)" },
-    { key: "FINANCE", label: "การเงิน (Cash Flow)" },
-    { key: "PROCUREMENT", label: "จัดซื้อจัดจ้าง (PO)" },
-    { key: "SETTINGS", label: "ตั้งค่าระบบ (Settings & Roles)" },
+    { key: "EXECUTIVE", label: "ระดับผู้บริหาร (Executive Boardroom & Settings)" },
+    { key: "OMS", label: "ปฏิบัติการ (Sales, Inventory, Warehouse)" },
+    { key: "FINANCE", label: "การเงินและบัญชี (Finance & AP)" },
+    { key: "HR", label: "งานบุคคล (Payroll, Org Chart)" }
 ];
 
 export default function RolesPage() {

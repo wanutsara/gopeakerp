@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
 import useSWR from 'swr';
-import { PlusIcon, ShoppingBagIcon, CalendarIcon, BanknotesIcon } from '@heroicons/react/24/outline';
+import { ShoppingBagIcon, CalendarIcon, BanknotesIcon, Cog8ToothIcon, InboxArrowDownIcon } from '@heroicons/react/24/outline';
+import OrderDetailsModal from './OrderDetailsModal';
 
 const fetcher = async (url: string) => {
     const res = await fetch(url);
@@ -14,8 +15,11 @@ export default function OMSOrdersPage() {
     const { data: orders, error, mutate } = useSWR('/api/oms/orders', fetcher);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Add Order Logic State
-    const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+    // Order View Modal State (DOM Engine)
+    const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+
+    // Legacy Revenue Mocker State
+    const [isRevenueModalOpen, setIsRevenueModalOpen] = useState(false);
     const [orderForm, setOrderForm] = useState({
         date: new Date().toISOString().split('T')[0],
         channel: 'SHOPEE',
@@ -43,7 +47,7 @@ export default function OMSOrdersPage() {
         setOrderForm(newForm);
     };
 
-    const onSubmitOrder = async (e: React.FormEvent) => {
+    const onSubmitRevenue = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         try {
@@ -55,16 +59,16 @@ export default function OMSOrdersPage() {
             });
 
             if (res.ok) {
-                setIsOrderModalOpen(false);
+                setIsRevenueModalOpen(false);
                 setOrderForm({
                     date: new Date().toISOString().split('T')[0],
                     channel: 'SHOPEE',
                     subtotal: 0, shippingFee: 0, platformFee: 0, discount: 0, total: 0, notes: ''
                 });
                 mutate();
-                alert('Revenue Logged Successfully!');
+                alert('Revenue Batch Logged Successfully!');
             } else {
-                alert('Failed to log order');
+                alert('Failed to log batch');
             }
         } catch (error) {
             console.error(error);
@@ -74,7 +78,7 @@ export default function OMSOrdersPage() {
     };
 
     if (error) return <div className="p-8 text-red-500">Error loading orders</div>;
-    if (!orders) return <div className="p-8 text-gray-500 animate-pulse">Loading Sales Data...</div>;
+    if (!orders) return <div className="p-8 text-gray-500 animate-pulse flex items-center gap-3"><Cog8ToothIcon className="w-6 h-6 animate-spin" /> Syncing Omni-Channel...</div>;
     if (orders?.error) return <div className="p-8 text-red-500">{orders.error}</div>;
 
     return (
@@ -82,58 +86,81 @@ export default function OMSOrdersPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
                 <div>
                     <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
-                        <ShoppingBagIcon className="w-8 h-8 text-indigo-600" />
-                        OMS / Revenue Center
+                        <InboxArrowDownIcon className="w-8 h-8 text-indigo-600" />
+                        OMS / Orders Directory
                     </h1>
-                    <p className="mt-1 text-gray-500 font-medium text-sm">Inject daily Omni-channel Sales into the Executive Dashboard Net Profit Tracker.</p>
+                    <p className="mt-1 text-gray-500 font-medium text-sm">Monitor Live Customer Orders, Route Split Fulfillments, and Handle RMAs natively.</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={() => setIsOrderModalOpen(true)}
+                        onClick={() => setIsRevenueModalOpen(true)}
+                        className="bg-white border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-50 px-5 py-2.5 rounded-xl font-bold transition flex items-center gap-2"
+                    >
+                        <BanknotesIcon className="w-5 h-5" /> Batch Revenue
+                    </button>
+                    <a
+                        href="/oms/import"
                         className="bg-gradient-to-r from-indigo-500 to-blue-600 hover:opacity-90 shadow-lg shadow-indigo-500/30 text-white px-5 py-2.5 rounded-xl font-bold transition flex items-center gap-2"
                     >
-                        <BanknotesIcon className="w-5 h-5" /> Log Daily Revenue
-                    </button>
+                        <ShoppingBagIcon className="w-5 h-5" /> AI Order Import
+                    </a>
                 </div>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm relative overflow-hidden">
                 <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-100 pb-3 flex items-center gap-2">
                     <CalendarIcon className="w-5 h-5 text-gray-400" />
-                    Recent Sales Logs
+                    Distributed Order Ledger
                 </h3>
 
                 {orders && orders.length > 0 ? (
-                    <div className="overflow-hidden rounded-2xl border border-gray-100">
+                    <div className="overflow-x-auto rounded-2xl border border-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th className="px-6 py-3 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Order ID</th>
+                                    <th className="px-6 py-3 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Customer</th>
                                     <th className="px-6 py-3 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Channel</th>
-                                    <th className="px-6 py-3 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Subtotal</th>
-                                    <th className="px-6 py-3 text-left text-xs font-black text-rose-500 uppercase tracking-wider">Fees & Disc</th>
-                                    <th className="px-6 py-3 text-right text-xs font-black text-green-600 uppercase tracking-wider">Net Received</th>
+                                    <th className="px-6 py-3 text-center text-xs font-black text-gray-500 uppercase tracking-wider">Items / Fulfillments</th>
+                                    <th className="px-6 py-3 text-right text-xs font-black text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th className="px-6 py-3 text-right text-xs font-black text-green-600 uppercase tracking-wider">Total Value</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-100">
                                 {orders.map((order: any) => (
-                                    <tr key={order.id} className="hover:bg-gray-50 transition">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {new Date(order.createdAt).toLocaleDateString()}
+                                    <tr
+                                        key={order.id}
+                                        onClick={() => setSelectedOrder(order)}
+                                        className="hover:bg-indigo-50/50 cursor-pointer transition"
+                                    >
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-indigo-600">
+                                            #{order.id.slice(-6).toUpperCase()}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-bold text-gray-900">{order.customer?.name || 'Guest / Batch'}</div>
+                                            {(order.notes && order.notes !== 'Daily Batch Entry') && <div className="text-xs text-gray-400 truncate w-32">{order.notes}</div>}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`px-3 py-1 text-xs font-bold rounded-full ${order.channel === 'SHOPEE' ? 'bg-orange-100 text-orange-700' :
-                                                    order.channel === 'TIKTOK' ? 'bg-black text-white' :
-                                                        order.channel === 'FACEBOOK' ? 'bg-blue-100 text-blue-700' :
-                                                            order.channel === 'LINESHOPPING' ? 'bg-green-100 text-green-700' :
-                                                                'bg-gray-100 text-gray-700'
+                                                order.channel === 'TIKTOK' ? 'bg-black text-white' :
+                                                    order.channel === 'FACEBOOK' ? 'bg-blue-100 text-blue-700' :
+                                                        order.channel === 'LINESHOPPING' ? 'bg-green-100 text-green-700' :
+                                                            'bg-gray-100 text-gray-700'
                                                 }`}>
                                                 {order.channel}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">฿{order.subtotal.toLocaleString()}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-rose-500">-฿{(order.platformFee + order.discount).toLocaleString()}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-right text-green-600">฿{order.total.toLocaleString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                                            <span className="font-bold text-gray-800">{order.items?.length || 0}</span> items
+                                            {" • "}
+                                            <span className={`font-black ${order.fulfillments?.length > 0 ? 'text-indigo-600' : 'text-gray-400'}`}>
+                                                {order.fulfillments?.length || 0}
+                                            </span> splits
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">
+                                            {new Date(order.createdAt).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-right text-emerald-600">฿{order.total?.toLocaleString() || '0'}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -141,25 +168,34 @@ export default function OMSOrdersPage() {
                     </div>
                 ) : (
                     <div className="p-12 text-center text-gray-400 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl">
-                        <ShoppingBagIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p className="font-bold">No Revenue Logs Found</p>
-                        <p className="text-sm mt-1">Click "Log Daily Revenue" to start building your dashboard.</p>
+                        <InboxArrowDownIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p className="font-bold">No Active Orders Found</p>
+                        <p className="text-sm mt-1">Import orders via AI or sync your Channels to populate.</p>
                     </div>
                 )}
             </div>
 
-            {/* Log Order Modal */}
-            {isOrderModalOpen && (
+            {/* DOM Order Details Modal */}
+            {selectedOrder && (
+                <OrderDetailsModal
+                    order={selectedOrder}
+                    onClose={() => setSelectedOrder(null)}
+                    mutate={mutate}
+                />
+            )}
+
+            {/* Legacy Revenue Modal */}
+            {isRevenueModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
-                        <div className="bg-gradient-to-r from-indigo-500 to-blue-600 p-6 flex justify-between items-center text-white">
+                        <div className="bg-gradient-to-r from-gray-700 to-gray-900 p-6 flex justify-between items-center text-white">
                             <div>
-                                <h2 className="text-xl font-black">Log Daily Revenue</h2>
-                                <p className="text-indigo-100 text-sm font-medium">Record sales batch into the General Ledger</p>
+                                <h2 className="text-xl font-black">Legacy Revenue Batching</h2>
+                                <p className="text-gray-300 text-sm font-medium">Inject raw amounts into GL without items.</p>
                             </div>
-                            <button onClick={() => setIsOrderModalOpen(false)} className="hover:bg-white/20 p-2 rounded-full transition">✕</button>
+                            <button onClick={() => setIsRevenueModalOpen(false)} className="hover:bg-white/20 p-2 rounded-full transition">✕</button>
                         </div>
-                        <form onSubmit={onSubmitOrder} className="p-6 space-y-4">
+                        <form onSubmit={onSubmitRevenue} className="p-6 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Date</label>
@@ -191,14 +227,14 @@ export default function OMSOrdersPage() {
                                 </div>
                             </div>
 
-                            <div className="bg-indigo-50 p-4 rounded-2xl flex items-center justify-between border border-indigo-100 mt-6">
-                                <span className="text-sm font-black text-indigo-800 uppercase tracking-wider">Net Received Revenue</span>
-                                <span className="text-3xl font-black text-indigo-600">฿{orderForm.total.toLocaleString()}</span>
+                            <div className="bg-gray-50 p-4 rounded-2xl flex items-center justify-between border border-gray-200 mt-6">
+                                <span className="text-sm font-black text-gray-500 uppercase tracking-wider">Net Received Revenue</span>
+                                <span className="text-3xl font-black text-gray-900">฿{orderForm.total.toLocaleString()}</span>
                             </div>
 
                             <div className="pt-4 flex justify-end gap-3">
-                                <button type="button" onClick={() => setIsOrderModalOpen(false)} className="px-6 py-2.5 text-gray-500 font-bold hover:bg-gray-100 rounded-xl">Cancel</button>
-                                <button disabled={isLoading} type="submit" className="bg-gradient-to-r from-indigo-500 to-blue-600 hover:scale-105 transition transform text-white px-8 py-2.5 font-black uppercase tracking-widest rounded-xl disabled:opacity-50">Log Revenue</button>
+                                <button type="button" onClick={() => setIsRevenueModalOpen(false)} className="px-6 py-2.5 text-gray-500 font-bold hover:bg-gray-100 rounded-xl">Cancel</button>
+                                <button disabled={isLoading} type="submit" className="bg-gray-900 hover:bg-black transition text-white px-8 py-2.5 font-black uppercase tracking-widest rounded-xl disabled:opacity-50">Log Revenue</button>
                             </div>
                         </form>
                     </div>

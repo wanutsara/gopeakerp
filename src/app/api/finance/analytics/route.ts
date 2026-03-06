@@ -3,12 +3,22 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
     try {
-        // Find Total Orders by Channel (Using Prisma GroupBy)
+        const { searchParams } = new URL(request.url);
+        const brandId = searchParams.get('brandId');
+
+        const baseOrderWhere = {
+            status: { not: "CANCELLED" },
+            ...(brandId && { companyBrandId: brandId })
+        };
+
+        const baseTxWhere = brandId ? { companyBrandId: brandId } : {};
+
+        // Find Total Orders by Channel
         const channelSales = await prisma.order.groupBy({
             by: ['channel'],
             _sum: { total: true },
             _count: { _all: true },
-            where: { status: { not: "CANCELLED" } }
+            where: baseOrderWhere
         });
 
         const formattedChannelSales = channelSales.map(cs => ({
@@ -17,46 +27,24 @@ export async function GET(request: Request) {
             orders: cs._count._all
         })).sort((a, b) => b.revenue - a.revenue);
 
-        // Find Top Products (From OrderItems)
-        const topProductsRaw = await prisma.orderItem.groupBy({
-            by: ['productId', 'productName'],
-            _sum: { quantity: true, price: true },
-        });
-
-        const formattedTopProducts = topProductsRaw
-            .map(tp => ({
-                id: tp.productId,
-                name: tp.productName,
-                quantity: tp._sum.quantity || 0,
-                // price here is actual price * quantity in best case, but we didn't store total per item.
-                // We'll estimate Revenue by sum of price * quantity but Prisma groupBy doesn't do math expr.
-                // So we'll just sort by quantity.
-            }))
-            .sort((a, b) => b.quantity - a.quantity)
-            .slice(0, 5);
-
         // Fetch accounts receivable
         const arData = await prisma.order.aggregate({
             _sum: { total: true },
             where: {
+                ...baseOrderWhere,
                 isReconciled: false,
-                status: { not: "CANCELLED" }
             }
         });
 
-        // ----------------------------------------------------
         // Aggregating Cash INFLOWS (Revenue)
-        // ----------------------------------------------------
         const cashInbound = await prisma.transaction.aggregate({
             _sum: { amountTHB: true },
-            where: { type: "INCOME" }
+            where: { type: "INCOME", ...baseTxWhere }
         });
 
-        // ----------------------------------------------------
         // Aggregating Cash OUTFLOWS (Expenses)
-        // ----------------------------------------------------
         const expenses = await prisma.transaction.findMany({
-            where: { type: "EXPENSE" },
+            where: { type: "EXPENSE", ...baseTxWhere },
             select: { amountTHB: true, category: true }
         });
 
@@ -69,7 +57,6 @@ export async function GET(request: Request) {
             return acc;
         }, {});
 
-        // Format expense breakdown for Chart.js
         const expenseDistribution = Object.keys(expenseBreakdown).map(k => ({
             category: k,
             amount: expenseBreakdown[k]
@@ -77,7 +64,6 @@ export async function GET(request: Request) {
 
         return NextResponse.json({
             channelSales: formattedChannelSales,
-            topProducts: formattedTopProducts,
             accountsReceivable: arData._sum.total || 0,
             cashReceived: cashInbound._sum.amountTHB || 0,
             totalExpenses,
@@ -86,6 +72,6 @@ export async function GET(request: Request) {
 
     } catch (error: any) {
         console.error("Error fetching analytics:", error);
-        return NextResponse.json({ error: "Internal server error", details: error.message, stack: error.stack }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendTargetedNotification } from "@/lib/notifications";
 
 export async function POST(request: Request) {
     try {
@@ -36,23 +37,15 @@ export async function POST(request: Request) {
             }
         });
 
-        // 2. Notify Approvers (Managers & Owners)
-        // Find Managers and Owners
-        const approvers = await prisma.user.findMany({
-            where: { role: { in: ["OWNER", "MANAGER"] } },
-            select: { id: true }
+        // 2. Enterprise Routing Matrix (Manager or HR Admins)
+        await sendTargetedNotification({
+            title: `📝 คำร้องขอปรับเวลา: ${session.user!.name}`,
+            message: `เหตุผล: ${reason}`,
+            type: "ATTENDANCE_REQUEST",
+            referenceId: adjustmentRequest.id,
+            managerId: employee.managerId || undefined,
+            fallbackModule: "HR"
         });
-
-        if (approvers.length > 0) {
-            const notifications = approvers.map(a => ({
-                userId: a.id,
-                title: `📝 คำร้องขอปรับเวลา: ${session.user!.name}`,
-                message: `เหตุผล: ${reason}`,
-                type: "ATTENDANCE_REQUEST",
-                referenceId: adjustmentRequest.id
-            }));
-            await prisma.notification.createMany({ data: notifications });
-        }
 
         return NextResponse.json({ success: true, request: adjustmentRequest });
 

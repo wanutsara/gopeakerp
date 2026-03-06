@@ -43,29 +43,39 @@ export default function Noticenter() {
             handleMarkAsRead(notification.id);
         }
         setIsOpen(false);
-        // Navigate based on type
-        if (notification.type === 'ATTENDANCE_REQUEST' && notification.referenceId) {
-            if (window.location.pathname.startsWith('/ess')) {
-                router.push('/ess/dashboard');
-            } else {
-                router.push('/hr/attendance'); // Or the new request inbox
-            }
-        } else if (notification.type === 'SYSTEM' && notification.title && notification.title.includes('เบิกจ่าย')) {
-            if (window.location.pathname.startsWith('/ess')) {
-                router.push('/ess/dashboard');
-            } else {
-                router.push('/hr/expenses');
-            }
-        } else if (notification.type === 'SYSTEM' && notification.title && notification.title.includes('AI Extraction')) {
-            router.push(`/oms/import?jobId=${notification.referenceId}`);
+        const type = notification.type;
+        const title = notification.title || "";
+
+        // Enterprise Deep-Link Routing Matrix
+        if (type === 'OVERTIME_REQUEST') {
+            router.push('/hr/overtime');
+        } else if (type === 'LEAVE_REQUEST') {
+            router.push('/hr/leave');
+        } else if (type === 'ATTENDANCE_REQUEST') {
+            router.push('/hr/attendance');
+        } else if (type === 'EXPENSE_REQUEST') {
+            router.push('/finance/expenses');
+        } else if (type === 'ANNOUNCEMENT') {
+            router.push('/hr/announcements');
+        } else if (type === 'GOAL_ASSIGNED') {
+            router.push('/hr/goals');
+        } else if (type === 'SYSTEM') {
+            if (title.includes('เบิกจ่าย')) router.push('/finance/expenses');
+            else if (title.includes('AI Extraction')) router.push(`/oms/import?jobId=${notification.referenceId}`);
+            else router.push('/dashboard'); // Generic fallback
+        } else {
+            console.log("No routing match for type:", type);
+            router.push('/dashboard');
         }
-        // Could handle other types like ANNOUNCEMENT
     };
 
     const getIcon = (type: string, title?: string) => {
         if (type === 'SYSTEM' && title?.includes('AI')) return <SparklesIcon className="w-5 h-5 text-fuchsia-500" />;
         switch (type) {
             case 'ATTENDANCE_REQUEST': return <ClockIcon className="w-5 h-5 text-blue-500" />;
+            case 'OVERTIME_REQUEST': return <ClockIcon className="w-5 h-5 text-orange-500" />;
+            case 'LEAVE_REQUEST': return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
+            case 'EXPENSE_REQUEST': return <InformationCircleIcon className="w-5 h-5 text-teal-500" />;
             case 'ANNOUNCEMENT': return <MegaphoneIcon className="w-5 h-5 text-purple-500" />;
             default: return <InformationCircleIcon className="w-5 h-5 text-gray-400" />;
         }

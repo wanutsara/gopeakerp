@@ -13,6 +13,8 @@
     "@hello-pangea/dnd": "^18.0.1",
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.19.2",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "@types/dagre": "^0.7.54",
     "@xyflow/react": "^12.10.1",
     "bcryptjs": "^3.0.3",
@@ -29,9 +31,12 @@
     "react": "^19.2.3",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.3",
+    "react-hot-toast": "^2.6.0",
     "react-leaflet": "^5.0.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.7.0",
     "swr": "^2.4.1",
+    "three": "^0.183.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/rbac";
 
 export async function GET() {
     try {
-        await requirePermission("SETTINGS", "READ");
+        await requirePermission("EXECUTIVE", "READ");
         const roles = await prisma.userRole.findMany({
             include: {
                 permissions: true,
@@ -19,13 +19,13 @@ export async function GET() {
         return NextResponse.json(roles);
     } catch (error) {
         console.error("Error fetching roles:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return NextResponse.json({ error: "Unauthorized or Internal server error" }, { status: 500 });
     }
 }
 
 export async function POST(request: Request) {
     try {
-        await requirePermission("SETTINGS", "WRITE");
+        await requirePermission("EXECUTIVE", "WRITE");
         const body = await request.json();
         const { name, description, permissions } = body;
 
@@ -62,13 +62,13 @@ export async function POST(request: Request) {
                 action: "CREATE",
                 entity: "USER_ROLE",
                 entityId: role.id,
-                details: `Created new role: ${role.name}`,
+                details: `Created new Enterprise Role: ${role.name}`,
             }
         });
 
         return NextResponse.json(role);
     } catch (error) {
         console.error("Error creating role:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return NextResponse.json({ error: "Unauthorized or Internal server error" }, { status: 500 });
     }
 }

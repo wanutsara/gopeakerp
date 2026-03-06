@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendTargetedNotification } from "@/lib/notifications";
 
 export async function GET(request: Request) {
     try {
@@ -88,35 +89,15 @@ export async function POST(request: Request) {
             }
         });
 
-        // Create notification for Manager/HR
-        if (employee.managerId) {
-            const manager = await prisma.employee.findUnique({ where: { id: employee.managerId }, include: { user: true } });
-            if (manager && manager.user) {
-                await prisma.notification.create({
-                    data: {
-                        userId: manager.user.id,
-                        title: "คำขออนุมัติลางาน",
-                        message: `${session.user.name} ได้ส่งคำขอลางาน จำนวน ${requestedHours} ชั่วโมง ขาดการพิจารณา`,
-                        type: "LEAVE_REQUEST",
-                        referenceId: newLeave.id
-                    }
-                });
-            }
-        } else {
-            // Fallback to MANAGER OR OWNER
-            const admins = await prisma.user.findMany({ where: { role: { in: ["OWNER", "MANAGER"] } } });
-            for (const admin of admins) {
-                await prisma.notification.create({
-                    data: {
-                        userId: admin.id,
-                        title: "คำขออนุมัติลางาน",
-                        message: `${session.user.name} ได้ส่งคำขอลางาน จำนวน ${requestedHours} ชั่วโมง ขาดการพิจารณา`,
-                        type: "LEAVE_REQUEST",
-                        referenceId: newLeave.id
-                    }
-                });
-            }
-        }
+        // Enterprise Routing Matrix (Manager or HR Admins)
+        await sendTargetedNotification({
+            title: "คำขออนุมัติลางาน",
+            message: `${session.user.name} ได้ส่งคำขอลางาน จำนวน ${requestedHours} ชั่วโมง ขาดการพิจารณา`,
+            type: "LEAVE_REQUEST",
+            referenceId: newLeave.id,
+            managerId: employee.managerId || undefined,
+            fallbackModule: "HR"
+        });
 
         return NextResponse.json({ success: true, request: newLeave });
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendTargetedNotification } from "@/lib/notifications";
 
 export async function GET(request: Request) {
     try {
@@ -68,35 +69,15 @@ export async function POST(request: Request) {
             }
         });
 
-        // Create notification for Manager/HR/Finance
-        if (employee.managerId) {
-            const manager = await prisma.employee.findUnique({ where: { id: employee.managerId }, include: { user: true } });
-            if (manager && manager.user) {
-                await prisma.notification.create({
-                    data: {
-                        userId: manager.user.id,
-                        title: "คำขอเบิกจ่ายใหม่ (Expense)",
-                        message: `${session.user.name} ได้ส่งคำขอเบิกจ่ายยอด ${amount} บาท`,
-                        type: "SYSTEM",
-                        referenceId: newExpense.id
-                    }
-                });
-            }
-        }
-
-        // Always notify OWNER and FINANCE for expenses
-        const financeAdmins = await prisma.user.findMany({ where: { role: { in: ["OWNER", "MANAGER"] } } });
-        for (const admin of financeAdmins) {
-            await prisma.notification.create({
-                data: {
-                    userId: admin.id,
-                    title: "คำขอเบิกจ่ายใหม่รอตรวจสอบ",
-                    message: `${session.user.name} ได้ส่งคำขอเบิกจ่ายยอด ${amount} บาท`,
-                    type: "SYSTEM",
-                    referenceId: newExpense.id
-                }
-            });
-        }
+        // Enterprise Routing Matrix (Manager or Finance Admins)
+        await sendTargetedNotification({
+            title: "คำขอเบิกจ่ายใหม่ (Expense)",
+            message: `${session.user.name} ได้ส่งคำขอเบิกจ่ายยอด ${amount} บาท`,
+            type: "EXPENSE_REQUEST",
+            referenceId: newExpense.id,
+            managerId: employee.managerId || undefined,
+            fallbackModule: "FINANCE"
+        });
 
         return NextResponse.json({ success: true, request: newExpense });
 
