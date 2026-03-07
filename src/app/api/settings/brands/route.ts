@@ -27,7 +27,11 @@ export async function GET() {
                 where: { userId: user?.id },
                 include: { companyBrand: true }
             });
-            brands = access.map((a: any) => a.companyBrand).sort((a: any, b: any) => (a.isHQ === b.isHQ ? 0 : a.isHQ ? -1 : 1));
+            const distinctMap = new Map();
+            access.forEach((a: any) => {
+                if (a.companyBrand) distinctMap.set(a.companyBrand.id, a.companyBrand);
+            });
+            brands = Array.from(distinctMap.values()).sort((a: any, b: any) => (a.isHQ === b.isHQ ? 0 : a.isHQ ? -1 : 1));
         }
 
 
