@@ -30,6 +30,17 @@ export default function EditEmployeePage() {
     const [isLeaveQuotaModalOpen, setIsLeaveQuotaModalOpen] = useState(false);
     const [leaveQuotaForm, setLeaveQuotaForm] = useState({ year: new Date().getFullYear(), sickLeaveTotal: 30, personalLeaveTotal: 6, vacationTotal: 6 });
 
+    // Manual Leave States
+    const [isManualLeaveModalOpen, setIsManualLeaveModalOpen] = useState(false);
+    const [mlType, setMlType] = useState("PERSONAL");
+    const [mlStartDate, setMlStartDate] = useState("");
+    const [mlEndDate, setMlEndDate] = useState("");
+    const [mlStartTime, setMlStartTime] = useState("09:00");
+    const [mlEndTime, setMlEndTime] = useState("18:00");
+    const [mlRequestedHours, setMlRequestedHours] = useState(8);
+    const [mlReason, setMlReason] = useState("");
+    const [mlAttachmentFile, setMlAttachmentFile] = useState<File | null>(null);
+
     const [formData, setFormData] = useState({
         // Auth / Basics
         name: "", email: "", password: "", role: "", userRoleId: "", image: "",
@@ -242,6 +253,56 @@ export default function EditEmployeePage() {
             }
         } catch (err) {
             console.error(err);
+        }
+    };
+
+    const handleManualLeaveSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            let uploadedUrl = null;
+            if (mlType === 'SICK' && mlAttachmentFile) {
+                const formData = new FormData();
+                formData.append("file", mlAttachmentFile);
+                const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+                if (!uploadRes.ok) throw new Error("Upload Failed");
+                const uploadData = await uploadRes.json();
+                uploadedUrl = uploadData.url;
+            } else if (mlType === 'SICK' && !mlAttachmentFile) {
+                alert("กรุณาแนบใบรับรองแพทย์");
+                return;
+            }
+
+            const res = await fetch("/api/hr/leave", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    employeeId: params.id,
+                    type: mlType,
+                    startDate: mlStartDate,
+                    endDate: mlEndDate,
+                    startTime: mlStartTime,
+                    endTime: mlEndTime,
+                    requestedHours: mlRequestedHours,
+                    reason: mlReason,
+                    attachmentUrl: uploadedUrl,
+                    status: "APPROVED"
+                })
+            });
+
+            if (res.ok) {
+                setIsManualLeaveModalOpen(false);
+                setMlAttachmentFile(null);
+                setMlReason("");
+                // Refresh employee balances
+                const updatedRes = await fetch(`/api/hr/employees/${params.id}`);
+                const updatedEmp = await updatedRes.json();
+                setEmployeeData(updatedEmp);
+            } else {
+                const d = await res.json();
+                alert(d.error || "Failed to create leave");
+            }
+        } catch (err: any) {
+            alert(err.message);
         }
     };
 
@@ -619,23 +680,32 @@ export default function EditEmployeePage() {
                             <section>
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="text-sm font-bold tracking-wider text-gray-400 uppercase">สรุปสิทธิการลาประจำปี (Leave Balances)</h3>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const currentYear = new Date().getFullYear();
-                                            const balance = employeeData?.leaveBalances?.find((b: { year: number }) => b.year === currentYear);
-                                            setLeaveQuotaForm({
-                                                year: currentYear,
-                                                sickLeaveTotal: balance?.sickLeaveTotal ?? 30,
-                                                personalLeaveTotal: balance?.personalLeaveTotal ?? 6,
-                                                vacationTotal: balance?.vacationTotal ?? 6
-                                            });
-                                            setIsLeaveQuotaModalOpen(true);
-                                        }}
-                                        className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg font-semibold hover:bg-gray-200 transition"
-                                    >
-                                        ✏️ แก้ไขโควต้า
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsManualLeaveModalOpen(true)}
+                                            className="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-semibold hover:bg-blue-200 transition shadow-sm"
+                                        >
+                                            ➕ บันทึกการลา (HR)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const currentYear = new Date().getFullYear();
+                                                const balance = employeeData?.leaveBalances?.find((b: { year: number }) => b.year === currentYear);
+                                                setLeaveQuotaForm({
+                                                    year: currentYear,
+                                                    sickLeaveTotal: balance?.sickLeaveTotal ?? 30,
+                                                    personalLeaveTotal: balance?.personalLeaveTotal ?? 6,
+                                                    vacationTotal: balance?.vacationTotal ?? 6
+                                                });
+                                                setIsLeaveQuotaModalOpen(true);
+                                            }}
+                                            className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg font-semibold hover:bg-gray-200 transition shadow-sm"
+                                        >
+                                            ✏️ แก้ไขโควต้า
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {['SICK', 'PERSONAL', 'VACATION'].map(type => {
@@ -883,6 +953,143 @@ export default function EditEmployeePage() {
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow"
                                 >
                                     บันทึกโควตา
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Manual Leave Modal */}
+            {isManualLeaveModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl w-full max-w-lg p-6 sm:p-8 relative shadow-2xl overflow-y-auto max-h-[90vh]">
+                        <button
+                            onClick={() => setIsManualLeaveModalOpen(false)}
+                            className="absolute top-5 right-5 text-gray-400 hover:text-gray-600 font-bold bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition"
+                        >
+                            ✕
+                        </button>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">➕ บันทึกการลา (HR Manual Entry)</h3>
+                        <p className="text-sm text-gray-500 mb-6">สร้างใบลาและหักโควต้าอัตโนมัติ ภายใต้สถานะ "อนุมัติแล้ว" ทันที</p>
+
+                        <form onSubmit={handleManualLeaveSubmit} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">ประเภทการลา <span className="text-red-500">*</span></label>
+                                <select
+                                    value={mlType}
+                                    onChange={(e) => setMlType(e.target.value)}
+                                    className="w-full bg-gray-50 border-gray-200 text-gray-900 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition px-4 py-3 border"
+                                    required
+                                >
+                                    <option value="PERSONAL">ลากิจ (Personal Leave)</option>
+                                    <option value="SICK">ลาป่วย (Sick Leave)</option>
+                                    <option value="VACATION">ลาพักร้อน (Vacation)</option>
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-5">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">วันที่เริ่มต้น</label>
+                                    <input
+                                        type="date"
+                                        value={mlStartDate}
+                                        onChange={(e) => setMlStartDate(e.target.value)}
+                                        className="w-full border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border bg-gray-50"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">วันที่สิ้นสุด</label>
+                                    <input
+                                        type="date"
+                                        value={mlEndDate}
+                                        onChange={(e) => setMlEndDate(e.target.value)}
+                                        className="w-full border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border bg-gray-50"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-5">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">เวลาเริ่ม</label>
+                                    <input
+                                        type="time"
+                                        value={mlStartTime}
+                                        onChange={(e) => setMlStartTime(e.target.value)}
+                                        className="w-full border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border bg-gray-50"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">เวลาเลิก</label>
+                                    <input
+                                        type="time"
+                                        value={mlEndTime}
+                                        onChange={(e) => setMlEndTime(e.target.value)}
+                                        className="w-full border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border bg-gray-50"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">ชม. ลา <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="number"
+                                        step="0.5"
+                                        value={mlRequestedHours}
+                                        onChange={(e) => setMlRequestedHours(parseFloat(e.target.value))}
+                                        className="w-full border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 px-4 py-2 border bg-blue-50 text-blue-900 font-bold"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">เหตุผลการลา</label>
+                                <textarea
+                                    value={mlReason}
+                                    onChange={(e) => setMlReason(e.target.value)}
+                                    className="w-full border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 px-4 py-3 border bg-gray-50 placeholder-gray-400"
+                                    rows={2}
+                                    placeholder="เพิ่มรายละเอียดหรือหมายเหตุประกอบ..."
+                                />
+                            </div>
+                            {mlType === 'SICK' && (
+                                <div className="animate-in fade-in duration-300 bg-red-50/50 p-4 rounded-xl border border-red-100">
+                                    <label className="block text-sm font-semibold text-red-900 mb-2">แนบใบรับรองแพทย์ <span className="text-red-500">*</span></label>
+                                    <div className="relative border-2 border-dashed border-red-200 bg-white rounded-xl p-4 text-center hover:bg-gray-50 transition-colors">
+                                        <input
+                                            type="file"
+                                            required
+                                            accept="image/*,application/pdf"
+                                            onChange={e => setMlAttachmentFile(e.target.files?.[0] || null)}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        />
+                                        {mlAttachmentFile ? (
+                                            <div className="text-sm font-medium text-blue-600 flex flex-col items-center gap-1">
+                                                <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                {mlAttachmentFile.name}
+                                            </div>
+                                        ) : (
+                                            <div className="text-sm text-red-400 flex flex-col items-center gap-1">
+                                                <svg className="w-6 h-6 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                                อัปโหลดไฟล์ (ภาพ หรือ PDF)
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="pt-6 flex justify-end gap-3 border-t border-gray-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsManualLeaveModalOpen(false)}
+                                    className="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200"
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 shadow-sm transition"
+                                >
+                                    เก็บบันทึก & ตัดโควต้า
                                 </button>
                             </div>
                         </form>

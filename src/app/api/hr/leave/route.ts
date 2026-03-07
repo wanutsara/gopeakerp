@@ -64,26 +64,31 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { type, startDate, endDate, startTime, endTime, requestedHours, reason, attachmentUrl } = body;
+        const { type, startDate, endDate, startTime, endTime, requestedHours, reason, attachmentUrl, employeeId, status } = body;
 
         if (!type || !startDate || !endDate || requestedHours === undefined) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        // Find the employee ID for the current user
-        const employee = await prisma.employee.findUnique({
-            where: {
-                userId: session.user.id
+        // Find the employee ID for the current user or use requested employeeId if Admin
+        let targetEmployeeId = "";
+        if ((session.user.role === "OWNER" || session.user.role === "MANAGER") && employeeId) {
+            targetEmployeeId = employeeId;
+        } else {
+            const employee = await prisma.employee.findUnique({
+                where: { userId: session.user.id }
+            });
+            if (!employee) {
+                return NextResponse.json({ error: "Employee profile not found" }, { status: 404 });
             }
-        });
-
-        if (!employee) {
-            return NextResponse.json({ error: "Employee profile not found" }, { status: 404 });
+            targetEmployeeId = employee.id;
         }
+
+        const leaveStatus = ((session.user.role === "OWNER" || session.user.role === "MANAGER") && status) ? status : "PENDING";
 
         const leaveRequest = await prisma.leaveRequest.create({
             data: {
-                employeeId: employee.id,
+                employeeId: targetEmployeeId,
                 type: type as LeaveType,
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
@@ -92,8 +97,39 @@ export async function POST(req: NextRequest) {
                 requestedHours: parseFloat(requestedHours),
                 reason: reason || null,
                 attachmentUrl: attachmentUrl || null,
+                status: leaveStatus,
+                approvedBy: leaveStatus === 'APPROVED' ? session.user.id : null
             }
         });
+
+        if (leaveStatus === 'APPROVED') {
+            const daysToDeduct = parseFloat(requestedHours) / 8;
+            if (daysToDeduct > 0) {
+                const year = new Date(startDate).getFullYear();
+
+                let updateData: any = {};
+                if (type === 'SICK') updateData = { sickLeaveUsed: { increment: daysToDeduct } };
+                if (type === 'PERSONAL') updateData = { personalLeaveUsed: { increment: daysToDeduct } };
+                if (type === 'VACATION') updateData = { vacationUsed: { increment: daysToDeduct } };
+
+                if (Object.keys(updateData).length > 0) {
+                    await prisma.leaveBalance.upsert({
+                        where: { employeeId_year: { employeeId: targetEmployeeId, year: year } },
+                        update: updateData,
+                        create: {
+                            employeeId: targetEmployeeId,
+                            year: year,
+                            sickLeaveTotal: 30, // Default standards
+                            personalLeaveTotal: 6,
+                            vacationTotal: 6,
+                            sickLeaveUsed: type === 'SICK' ? daysToDeduct : 0,
+                            personalLeaveUsed: type === 'PERSONAL' ? daysToDeduct : 0,
+                            vacationUsed: type === 'VACATION' ? daysToDeduct : 0,
+                        }
+                    });
+                }
+            }
+        }
 
         return NextResponse.json(leaveRequest, { status: 201 });
     } catch (err: any) {
