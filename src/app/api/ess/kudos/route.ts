@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { addExperiencePoints, EXP_KUDOS_SENT, EXP_KUDOS_RECEIVED } from "@/lib/gamification";
 
 export async function GET(request: Request) {
     try {
@@ -82,12 +81,6 @@ export async function POST(request: Request) {
         // Add Gamification EXP
         let senderExpGain = null;
         let receiverExpGain = null;
-
-        const senderEmployee = await prisma.employee.findFirst({ where: { userId: session.user.id } });
-        if (senderEmployee) {
-            senderExpGain = await addExperiencePoints(senderEmployee.id, EXP_KUDOS_SENT);
-        }
-        receiverExpGain = await addExperiencePoints(receiverId, EXP_KUDOS_RECEIVED);
 
         return NextResponse.json({
             ...newKudos,

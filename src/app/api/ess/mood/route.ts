@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { addExperiencePoints, EXP_MOOD_CHECKIN } from "@/lib/gamification";
 
 export async function GET(request: Request) {
     try {
@@ -96,9 +95,6 @@ export async function POST(request: Request) {
         });
 
         let expGain = null;
-        if (!existingMood) {
-            expGain = await addExperiencePoints(employee.id, EXP_MOOD_CHECKIN);
-        }
 
         // Use upsert to prevent unique constraint errors (one mood per day)
         try {
