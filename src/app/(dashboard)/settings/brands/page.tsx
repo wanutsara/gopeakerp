@@ -225,10 +225,10 @@ export default function CorporateIdentityManager() {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl z-10 overflow-hidden"
+                            className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl z-10 max-h-[90vh] flex flex-col overflow-hidden"
                         >
-                            <div className="p-8">
-                                <h2 className="text-2xl font-bold mb-6 text-gray-800">
+                            <div className="p-6 sm:p-8 overflow-y-auto flex-1">
+                                <h2 className="text-2xl font-bold mb-6 text-gray-800 shrink-0">
                                     {editingBrand ? 'แก้ไขข้อมูลบริษัทย่อย' : 'เพิ่มนิติบุคคล / แบรนด์ใหม่'}
                                 </h2>
 
