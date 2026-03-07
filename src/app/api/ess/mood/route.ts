@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { addExperiencePoints, EXP_MOOD_CHECKIN } from "@/lib/gamification";
 
 export async function GET(request: Request) {
     try {
@@ -89,6 +90,16 @@ export async function POST(request: Request) {
 
         let latestMood;
 
+        // Check if this is the first submission today to prevent EXP Farming
+        const existingMood = await prisma.employeeMood.findFirst({
+            where: { employeeId: employee.id, date: today }
+        });
+
+        let expGain = null;
+        if (!existingMood) {
+            expGain = await addExperiencePoints(employee.id, EXP_MOOD_CHECKIN);
+        }
+
         // Use upsert to prevent unique constraint errors (one mood per day)
         try {
             latestMood = await prisma.employeeMood.upsert({
@@ -121,7 +132,7 @@ export async function POST(request: Request) {
             });
         }
 
-        return NextResponse.json(latestMood, { status: 201 });
+        return NextResponse.json({ ...latestMood, xp: expGain }, { status: 201 });
 
     } catch (error) {
         console.error("Error submitting mood:", error);

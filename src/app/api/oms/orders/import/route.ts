@@ -99,7 +99,7 @@ ${(rawData as string).substring(0, 100000)}
 
         // --- STEP 2: The Database Sync (CDP + Auto-COGS) ---
         if (action === 'SYNC') {
-            const { orders } = body;
+            const { orders, companyBrandId } = body;
             const results = { synced: 0, stockUpdated: 0, customersCreated: 0, errors: [] as string[] };
 
             // Phase 29: System-wide Accounting Guard
@@ -267,6 +267,7 @@ ${(rawData as string).substring(0, 100000)}
                             channel: order.channel || 'OTHER',
                             status: 'COMPLETED',
                             customerId: customerId, // Explicitly link to CRM profile
+                            companyBrandId: companyBrandId || null, // Map to Specific Brand Location
                             subtotal: Number(order.subtotal) || 0,
                             shippingFee: Number(order.shippingFee) || 0,
                             platformFee: Number(order.platformFee) || 0,

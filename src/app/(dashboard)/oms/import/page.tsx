@@ -1,9 +1,12 @@
 'use client';
 import { useState, useRef, useEffect, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CloudArrowUpIcon, SparklesIcon, CheckCircleIcon, ExclamationTriangleIcon, CircleStackIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { CloudArrowUpIcon, SparklesIcon, CheckCircleIcon, ExclamationTriangleIcon, CircleStackIcon, UsersIcon, BuildingStorefrontIcon } from '@heroicons/react/24/outline';
+import useSWR from 'swr';
 
 const MAX_FILE_SIZE = 1024 * 1024 * 5; // 5 MB
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 function OmniImportContent() {
     const searchParams = useSearchParams();
@@ -12,6 +15,9 @@ function OmniImportContent() {
     const [filePos, setFilePos] = useState<File | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false); // For upload phase
     const [pendingJobId, setPendingJobId] = useState<string | null>(null);
+    const [selectedBrandId, setSelectedBrandId] = useState<string>('');
+    const { data: brandsRes } = useSWR('/api/settings/brands', fetcher);
+    const brands = Array.isArray(brandsRes) ? brandsRes : (brandsRes?.brands || []);
     const queryJobId = searchParams.get('jobId');
 
     // Sync URL queries down to state if the user clicks a notification while already on the page
@@ -81,6 +87,10 @@ function OmniImportContent() {
 
     const handleAnalyze = async () => {
         if (!filePos) return;
+        if (!selectedBrandId) {
+            setError('Please explicitly select a Target Brand / Store before processing your dataset.');
+            return;
+        }
         if (filePos.size > MAX_FILE_SIZE) {
             setError(`File is too large (${(filePos.size / 1024 / 1024).toFixed(1)}MB). Please split your export into files under 5MB to ensure AI Context Length is not exceeded.`);
             return;
@@ -123,7 +133,7 @@ function OmniImportContent() {
             const res = await fetch('/api/oms/orders/import', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'SYNC', orders: analysisResult })
+                body: JSON.stringify({ action: 'SYNC', orders: analysisResult, companyBrandId: selectedBrandId })
             });
             const data = await res.json();
 
@@ -218,14 +228,43 @@ function OmniImportContent() {
 
             {!pendingJobId && !analysisResult && !syncStats && (
                 <div
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={handleDrop}
-                    className="border-2 border-dashed border-fuchsia-300 bg-gradient-to-b from-white to-fuchsia-50/30 rounded-3xl p-16 flex flex-col items-center justify-center text-center hover:bg-fuchsia-50/80 transition-all group shadow-sm mt-4"
+                    onDragOver={(e) => { e.preventDefault(); if (!selectedBrandId) e.dataTransfer.dropEffect = 'none'; }}
+                    onDrop={selectedBrandId ? handleDrop : (e) => { e.preventDefault(); setError('Select a Target Store First.'); }}
+                    className={`border-2 ${selectedBrandId ? 'border-dashed border-fuchsia-300 bg-gradient-to-b from-white to-fuchsia-50/30 hover:bg-fuchsia-50/80 cursor-pointer' : 'border-dashed border-gray-200 bg-gray-50 cursor-not-allowed'} rounded-3xl p-16 flex flex-col items-center justify-center text-center transition-all group shadow-sm mt-4`}
                 >
-                    <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-fuchsia-100 rounded-3xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner border border-white">
-                        <CloudArrowUpIcon className="w-12 h-12 text-fuchsia-600" />
+                    <div className="w-full max-w-sm mb-10 p-6 bg-white rounded-2xl shadow-sm border border-gray-100 relative z-10" onClick={e => e.stopPropagation()}>
+                        <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
+                            <BuildingStorefrontIcon className="w-5 h-5 text-indigo-500" />
+                            Target Store / Brand
+                        </label>
+                        {brands.length === 0 ? (
+                            <Link href="/settings/brands" className="w-full bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-xl flex items-center justify-center p-3 font-bold transition-all hover:bg-indigo-100 hover:scale-[1.02]">
+                                ⚠️ คลิกที่นี่เพื่อสร้างร้านค้า (Store) แรกของคุณ
+                            </Link>
+                        ) : (
+                            <select
+                                value={selectedBrandId}
+                                onChange={(e) => setSelectedBrandId(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl focus:ring-fuchsia-500 focus:border-fuchsia-500 block p-3 font-medium transition-colors cursor-pointer hover:bg-white"
+                                required
+                            >
+                                <option value="" disabled>Select the Store for this Export...</option>
+                                {brands.map((brand: any) => (
+                                    <option key={brand.id} value={brand.id}>
+                                        {brand.name}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                        {!selectedBrandId && (
+                            <p className="text-xs text-amber-600 mt-2 font-medium">⚠️ Dropzone Locked. Select a store first.</p>
+                        )}
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">Drag and drop your Spreadsheet</h3>
+
+                    <div className={`w-24 h-24 bg-gradient-to-br ${selectedBrandId ? 'from-purple-100 to-fuchsia-100 group-hover:scale-110 shadow-inner' : 'from-gray-100 to-gray-50 opacity-50'} rounded-3xl flex items-center justify-center mb-6 transition-transform border border-white`}>
+                        <CloudArrowUpIcon className={`w-12 h-12 ${selectedBrandId ? 'text-fuchsia-600' : 'text-gray-400'}`} />
+                    </div>
+                    <h3 className={`text-2xl font-bold ${selectedBrandId ? 'text-gray-900' : 'text-gray-400'} mb-3`}>Drag and drop your Spreadsheet</h3>
                     <p className="text-gray-500 mb-8 max-w-md">Gemini's Context Window supports up to ~10,000 text rows per file. Drop .csv, .xlsx, or JSON text. Processing routes asynchronously to prevent browser crashes.</p>
 
                     <input
@@ -238,8 +277,9 @@ function OmniImportContent() {
 
                     <div className="flex gap-4">
                         <button
+                            disabled={!selectedBrandId}
                             onClick={() => fileInputRef.current?.click()}
-                            className="px-8 py-4 bg-white border border-gray-200 text-gray-700 font-bold rounded-2xl hover:bg-gray-50 hover:shadow-md transition-all active:scale-95"
+                            className={`px-8 py-4 bg-white border border-gray-200 font-bold rounded-2xl transition-all active:scale-95 ${selectedBrandId ? 'text-gray-700 hover:bg-gray-50 hover:shadow-md' : 'text-gray-300 cursor-not-allowed opacity-50'}`}
                         >
                             Select File
                         </button>

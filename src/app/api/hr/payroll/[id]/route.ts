@@ -16,7 +16,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }
 
         const body = await req.json();
-        const { status, otherIncome, bonus, deductions, socialSecurityDeduction, taxDeduction, lateDeduction } = body;
+        const {
+            status, otherIncome, bonus, deductions, socialSecurityDeduction,
+            taxDeduction, lateDeduction, overtimePay, ssoEmployerContribution
+        } = body;
 
         const currentPayroll = await prisma.payroll.findUnique({ where: { id } });
         if (!currentPayroll) {
@@ -29,30 +32,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             dataToUpdate.status = status;
         }
 
-        // Support editing incomes and auto-recalculate net salary
-        let newNetSalary = currentPayroll.netSalary;
+        // Support editing incomes/deductions and auto-recalculate net salary dynamically
         let needsRecalc = false;
 
+        const finalOT = overtimePay ?? currentPayroll.otAmount;
         const finalOtherIncome = otherIncome ?? currentPayroll.otherIncome;
         const finalBonus = bonus ?? currentPayroll.bonus;
-        const finalDeductions = deductions ?? currentPayroll.deductions;
+        const finalDeductions = deductions ?? currentPayroll.deductions; // Student Loans
         const finalSS = socialSecurityDeduction ?? currentPayroll.socialSecurityDeduction;
         const finalTax = taxDeduction ?? currentPayroll.taxDeduction;
         const finalLate = lateDeduction ?? currentPayroll.lateDeduction;
+        const finalEmployerSSO = ssoEmployerContribution ?? currentPayroll.ssoEmployerContribution;
 
-        if (otherIncome !== undefined || bonus !== undefined || deductions !== undefined ||
-            socialSecurityDeduction !== undefined || taxDeduction !== undefined || lateDeduction !== undefined) {
+        if (overtimePay !== undefined || otherIncome !== undefined || bonus !== undefined || deductions !== undefined ||
+            socialSecurityDeduction !== undefined || taxDeduction !== undefined || lateDeduction !== undefined || ssoEmployerContribution !== undefined) {
+
+            dataToUpdate.otAmount = finalOT; // Sync otAmount mapping
+            dataToUpdate.overtimePay = finalOT;
             dataToUpdate.otherIncome = finalOtherIncome;
             dataToUpdate.bonus = finalBonus;
             dataToUpdate.deductions = finalDeductions;
             dataToUpdate.socialSecurityDeduction = finalSS;
+            dataToUpdate.ssoEmployerContribution = finalEmployerSSO;
             dataToUpdate.taxDeduction = finalTax;
             dataToUpdate.lateDeduction = finalLate;
             needsRecalc = true;
         }
 
         if (needsRecalc) {
-            dataToUpdate.netSalary = currentPayroll.baseSalary + currentPayroll.otAmount + finalBonus + finalOtherIncome
+            dataToUpdate.netSalary = currentPayroll.baseSalary + finalOT + finalBonus + finalOtherIncome
                 - finalDeductions - finalSS - finalTax - finalLate;
         }
 

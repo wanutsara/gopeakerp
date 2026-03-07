@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function POST(request: Request, context: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getServerSession(authOptions);
         if (!session || !session.user) {
@@ -11,7 +11,7 @@ export async function POST(request: Request, context: { params: { id: string } }
         }
 
         // Await params explicitly for Next.js 15+ compatibility
-        const unwrappedParams = await context.params;
+        const unwrappedParams = await params;
         const orderId = unwrappedParams.id;
 
         const { itemIdsToFulfill, locationId } = await request.json();

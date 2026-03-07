@@ -111,6 +111,7 @@ const navigation = [
         module: "EXECUTIVE",
         children: [
             { name: "แผงควบคุมสิทธิ์ (Roles Matrix)", href: "/settings/roles" },
+            { name: "ข้อมูลนิติบุคคล (Brands)", href: "/settings/brands" },
             { name: "ตั้งค่าระบบ (System Core)", href: "/settings/system" },
             { name: "ตั้งค่า HR (HR Settings)", href: "/hr/settings" },
         ]

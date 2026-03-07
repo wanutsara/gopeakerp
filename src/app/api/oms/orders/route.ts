@@ -2,20 +2,26 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { generateTaxInvoiceNumber, calculateVAT } from '@/lib/invoicing';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
         const session = await getServerSession(authOptions);
         if (!session || !session.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+        const { searchParams } = new URL(request.url);
+        const brandId = searchParams.get('brandId');
+
         const orders = await prisma.order.findMany({
+            where: brandId ? { companyBrandId: brandId } : undefined,
             orderBy: { createdAt: 'desc' },
             take: 100,
             include: {
                 customer: true,
                 items: true,
                 fulfillments: true,
-                returns: true
+                returns: true,
+                companyBrand: true
             }
         });
 
@@ -34,9 +40,16 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { date, subtotal, shippingFee, platformFee, discount, total, channel, notes } = body;
+        const { date, subtotal, shippingFee, platformFee, discount, total, channel, notes, isVatInclusive = true } = body;
 
         const orderDate = new Date(date);
+
+        // Calculate Value-Added Tax (Thailand Context)
+        const finalTotal = Number(total) || 0;
+        const { subtotalBeforeVat, vatAmount } = calculateVAT(finalTotal, isVatInclusive);
+
+        // Secure next Sequential e-Tax Invoice Number structure [YY][MM][000X]
+        const taxInvoiceNumber = await generateTaxInvoiceNumber("INV");
 
         // We create a unified daily summary 'Order' record for simplicity,
         // or a specific order if needed. Currently, the dashboard sums up 'total'.
@@ -48,7 +61,11 @@ export async function POST(request: Request) {
                 shippingFee: Number(shippingFee) || 0,
                 platformFee: Number(platformFee) || 0,
                 discount: Number(discount) || 0,
-                total: Number(total) || 0,
+                total: finalTotal,
+                isVatInclusive: isVatInclusive,
+                vatAmount: vatAmount,
+                subtotalBeforeVat: subtotalBeforeVat,
+                taxInvoiceNumber: taxInvoiceNumber,
                 notes: notes || 'Daily Batch Entry',
                 createdAt: orderDate,
             }
@@ -58,11 +75,13 @@ export async function POST(request: Request) {
         await prisma.transaction.create({
             data: {
                 type: 'INCOME',
-                amount: Number(total) || 0,
-                amountTHB: Number(total) || 0,
+                amount: finalTotal,
+                amountTHB: finalTotal,
+                taxAmount: vatAmount,
+                taxType: "VAT_SALES",
                 date: orderDate,
                 category: 'SALES_REVENUE',
-                description: `Sales Revenue from ${channel || 'OTHER'}`
+                description: `Sales Revenue [${taxInvoiceNumber}] from ${channel || 'OTHER'}`
             }
         });
 

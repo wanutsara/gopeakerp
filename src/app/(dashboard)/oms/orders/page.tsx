@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import useSWR from 'swr';
-import { ShoppingBagIcon, CalendarIcon, BanknotesIcon, Cog8ToothIcon, InboxArrowDownIcon } from '@heroicons/react/24/outline';
+import { ShoppingBagIcon, CalendarIcon, BanknotesIcon, Cog8ToothIcon, InboxArrowDownIcon, BuildingStorefrontIcon } from '@heroicons/react/24/outline';
 import OrderDetailsModal from './OrderDetailsModal';
 
 const fetcher = async (url: string) => {
@@ -12,7 +12,11 @@ const fetcher = async (url: string) => {
 };
 
 export default function OMSOrdersPage() {
-    const { data: orders, error, mutate } = useSWR('/api/oms/orders', fetcher);
+    const [selectedBrandId, setSelectedBrandId] = useState<string>('ALL');
+    const { data: brandsRes } = useSWR('/api/settings/brands', fetcher);
+    const brands = Array.isArray(brandsRes) ? brandsRes : (brandsRes?.brands || []);
+
+    const { data: orders, error, mutate } = useSWR(selectedBrandId === 'ALL' ? '/api/oms/orders' : `/api/oms/orders?brandId=${selectedBrandId}`, fetcher);
     const [isLoading, setIsLoading] = useState(false);
 
     // Order View Modal State (DOM Engine)
@@ -108,10 +112,25 @@ export default function OMSOrdersPage() {
             </div>
 
             <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm relative overflow-hidden">
-                <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-100 pb-3 flex items-center gap-2">
-                    <CalendarIcon className="w-5 h-5 text-gray-400" />
-                    Distributed Order Ledger
-                </h3>
+                <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-3">
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <CalendarIcon className="w-5 h-5 text-gray-400" />
+                        Distributed Order Ledger
+                    </h3>
+                    <div className="flex items-center gap-2 relative z-10">
+                        <BuildingStorefrontIcon className="w-5 h-5 text-indigo-500" />
+                        <select
+                            value={selectedBrandId}
+                            onChange={(e) => setSelectedBrandId(e.target.value)}
+                            className="bg-gray-50 border border-gray-200 text-gray-900 text-sm font-bold rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2 cursor-pointer outline-none hover:bg-white transition-colors"
+                        >
+                            <option value="ALL">🏢 All Stores & Brands</option>
+                            {brands.map((brand: any) => (
+                                <option key={brand.id} value={brand.id}>{brand.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
 
                 {orders && orders.length > 0 ? (
                     <div className="overflow-x-auto rounded-2xl border border-gray-100">
@@ -138,7 +157,12 @@ export default function OMSOrdersPage() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-bold text-gray-900">{order.customer?.name || 'Guest / Batch'}</div>
-                                            {(order.notes && order.notes !== 'Daily Batch Entry') && <div className="text-xs text-gray-400 truncate w-32">{order.notes}</div>}
+                                            {selectedBrandId === 'ALL' && order.companyBrand && (
+                                                <div className="mt-1 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded w-fit border border-indigo-100">
+                                                    🏢 {order.companyBrand.name}
+                                                </div>
+                                            )}
+                                            {(order.notes && order.notes !== 'Daily Batch Entry') && <div className="text-xs text-gray-400 truncate w-32 mt-0.5">{order.notes}</div>}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`px-3 py-1 text-xs font-bold rounded-full ${order.channel === 'SHOPEE' ? 'bg-orange-100 text-orange-700' :

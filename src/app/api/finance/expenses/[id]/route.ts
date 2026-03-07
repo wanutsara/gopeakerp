@@ -23,7 +23,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         });
 
         const body = await request.json();
-        const { status } = body;
+        const { status, whtRate, whtAmount, netPayable } = body;
 
         if (!status) {
             return NextResponse.json({ error: "Status is required" }, { status: 400 });
@@ -46,7 +46,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                     where: { id },
                     data: {
                         status: "PAID",
-                        approverId: approver?.id
+                        approverId: approver?.id,
+                        whtRate: whtRate !== undefined ? parseFloat(whtRate) : existing.whtRate,
+                        whtAmount: whtAmount !== undefined ? parseFloat(whtAmount) : existing.whtAmount,
+                        netPayable: netPayable !== undefined ? parseFloat(netPayable) : existing.netPayable
                     },
                     include: { requestor: { select: { user: { select: { name: true } } } } }
                 });
@@ -56,10 +59,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                     await tx.transaction.create({
                         data: {
                             type: "EXPENSE",
-                            amount: updatedRequest.amount,
-                            amountTHB: updatedRequest.amount,
+                            amount: updatedRequest.netPayable || updatedRequest.amount,
+                            amountTHB: updatedRequest.netPayable || updatedRequest.amount,
+                            taxAmount: updatedRequest.whtAmount,
+                            taxType: updatedRequest.whtAmount > 0 ? (updatedRequest.category === 'Company' ? 'PND53' : 'PND3') : null,
                             category: updatedRequest.category || "PROCUREMENT",
-                            description: `[PO-PAID] ${updatedRequest.title} (Requested by: ${updatedRequest.requestor.user?.name || 'Unknown'})`,
+                            description: `[EXPENSE-PAID] ${updatedRequest.title} (Requested by: ${updatedRequest.requestor.user?.name || 'Unknown'})`,
                             expenseRequestId: updatedRequest.id,
                             date: new Date()
                         }
@@ -80,7 +85,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             where: { id },
             data: {
                 status,
-                approverId: approver?.id
+                approverId: approver?.id,
+                whtRate: whtRate !== undefined ? parseFloat(whtRate) : existing.whtRate,
+                whtAmount: whtAmount !== undefined ? parseFloat(whtAmount) : existing.whtAmount,
+                netPayable: netPayable !== undefined ? parseFloat(netPayable) : existing.netPayable
             }
         });
 

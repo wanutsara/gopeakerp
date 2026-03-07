@@ -6,12 +6,12 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const brandId = searchParams.get('brandId');
 
-        const baseOrderWhere = {
+        const baseOrderWhere: any = {
             status: { not: "CANCELLED" },
             ...(brandId && { companyBrandId: brandId })
         };
 
-        const baseTxWhere = brandId ? { companyBrandId: brandId } : {};
+        const baseTxWhere: any = brandId ? { companyBrandId: brandId } : {};
 
         // Find Total Orders by Channel
         const channelSales = await prisma.order.groupBy({
@@ -62,12 +62,29 @@ export async function GET(request: Request) {
             amount: expenseBreakdown[k]
         })).sort((a, b) => b.amount - a.amount);
 
+        // Fetch Top Products
+        const topProductsData = await prisma.orderItem.groupBy({
+            by: ['productName'],
+            _sum: { quantity: true },
+            orderBy: { _sum: { quantity: 'desc' } },
+            take: 5,
+            where: {
+                order: baseOrderWhere
+            }
+        });
+
+        const topProducts = topProductsData.map(p => ({
+            name: p.productName || 'Unknown',
+            quantity: p._sum.quantity || 0,
+        }));
+
         return NextResponse.json({
             channelSales: formattedChannelSales,
             accountsReceivable: arData._sum.total || 0,
             cashReceived: cashInbound._sum.amountTHB || 0,
             totalExpenses,
-            expenseDistribution
+            expenseDistribution,
+            topProducts
         });
 
     } catch (error: any) {

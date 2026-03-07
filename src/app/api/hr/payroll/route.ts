@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { calculateThaiSSO, calculateThaiPND1, TaxDeductions } from "@/lib/tax"; // Phase 49B Engine
 
 export async function GET(req: NextRequest) {
     try {
@@ -68,56 +69,93 @@ export async function POST(req: NextRequest) {
         const existingEmployeeIds = existingPayrolls.map(p => p.employeeId);
 
         const newPayrollsToCreate = [];
+        const payrollYear = parseInt(month.split('-')[0]);
+        const payrollDate = new Date(`${month}-28`); // Estimate end of month for calculations
 
         for (const emp of activeEmployees) {
             if (!existingEmployeeIds.includes(emp.id)) {
-                // Calculate base logic. In a real system, you'd calculate deductions from Leaves/Attendance.
-                // For now, we take `wageRate` as base monthly salary.
+                // 1. Base Salary with Mid-Month Proxy (Assuming full month for now, real systems check attendance/start date)
                 const baseSalary = emp.employeeType === 'MONTHLY' ? emp.wageRate : (emp.wageRate * 22);
 
-                // Calculate Thai Social Security (5%, max 750 THB from 15k base)
+                // 2. Fetch Year-to-Date (YTD) aggregates for PND.1 progressive taxation
+                const ytdPayrolls = await prisma.payroll.findMany({
+                    where: { employeeId: emp.id, month: { startsWith: `${payrollYear}-` } }
+                });
+                const ytdIncome = ytdPayrolls.reduce((sum, p) => sum + p.baseSalary + p.otAmount + p.otherIncome, 0);
+                const ytdTax = ytdPayrolls.reduce((sum, p) => sum + p.taxDeduction, 0);
+
+                // 3. Dynamic Date-Aware SSO matching (Handles 2026 cap increases)
                 let socialSecurityDeduction = 0;
+                let ssoEmployerContribution = 0;
                 if (emp.employeeType === 'MONTHLY' && baseSalary >= 1650) {
-                    socialSecurityDeduction = Math.floor(Math.min(baseSalary * 0.05, 750));
+                    socialSecurityDeduction = calculateThaiSSO(baseSalary, payrollDate);
+                    ssoEmployerContribution = socialSecurityDeduction; // Employer matches 1:1
                 }
 
-                // Calculate actual OT Amount from approved OvertimeRequests matching this month
+                // 4. Overtime (Taxable but NON-SSO)
                 const startDate = new Date(`${month}-01`);
                 const endDate = new Date(startDate);
                 endDate.setMonth(endDate.getMonth() + 1);
 
                 const otRequests = await prisma.overtimeRequest.findMany({
-                    where: {
-                        employeeId: emp.id,
-                        status: "APPROVED",
-                        date: {
-                            gte: startDate,
-                            lt: endDate
-                        }
-                    }
+                    where: { employeeId: emp.id, status: "APPROVED", date: { gte: startDate, lt: endDate } }
                 });
 
                 const hourlyWage = emp.employeeType === 'MONTHLY' ? (emp.wageRate / 30 / 8) : (emp.wageRate / 8);
                 let otAmount = 0;
-                for (const ot of otRequests) {
-                    otAmount += (ot.calculatedHours * ot.multiplier * hourlyWage);
-                }
-                otAmount = Math.round(otAmount); // Round to nearest integer for THB
+                for (const ot of otRequests) { otAmount += (ot.calculatedHours * ot.multiplier * hourlyWage); }
+                otAmount = Math.round(otAmount);
 
-                const netSalary = (baseSalary + otAmount) - socialSecurityDeduction;
+                // 5. Calculate PND.1 using the Enterprise Engine
+                const parsedDeductions = emp.taxDeductions ? (emp.taxDeductions as unknown as TaxDeductions) : {};
+                // Inject the auto-calculated SSO into the deduction profile
+                parsedDeductions.socialSecurityTotal = (ytdPayrolls.reduce((s, p) => s + p.socialSecurityDeduction, 0)) + socialSecurityDeduction;
+
+                const taxDeduction = calculateThaiPND1(
+                    baseSalary,
+                    otAmount,
+                    parsedDeductions,
+                    payrollDate,
+                    ytdIncome,
+                    ytdTax,
+                    13 - (payrollDate.getMonth() + 1)
+                );
+
+                // 6. Student Loan (กยศ.) & Deductions
+                const studentLoan = emp.studentLoanDeduction || 0;
+                const totalDeductions = socialSecurityDeduction + taxDeduction + studentLoan;
+
+                // 7. Net Salary
+                const netSalary = (baseSalary + otAmount) - totalDeductions;
+
+                // Sanitization guard against NaN
+                const safeBaseSalary = Number.isNaN(baseSalary) ? 0 : baseSalary;
+                const safeOtAmount = Number.isNaN(otAmount) ? 0 : otAmount;
+                const safeSocialSecurityDeduction = Number.isNaN(socialSecurityDeduction) ? 0 : socialSecurityDeduction;
+                const safeSsoEmployerContribution = Number.isNaN(ssoEmployerContribution) ? 0 : ssoEmployerContribution;
+                const safeTaxDeduction = Number.isNaN(taxDeduction) ? 0 : taxDeduction;
+                const safeStudentLoan = Number.isNaN(studentLoan) ? 0 : studentLoan;
+                const safeYtdIncome = Number.isNaN(ytdIncome) ? 0 : ytdIncome;
+                const safeYtdTax = Number.isNaN(ytdTax) ? 0 : ytdTax;
+                const safeNetSalary = Number.isNaN(netSalary) ? 0 : netSalary;
 
                 newPayrollsToCreate.push({
                     employeeId: emp.id,
                     month,
-                    baseSalary,
-                    otAmount,
+                    baseSalary: safeBaseSalary,
+                    otAmount: safeOtAmount, // In Prisma, otAmount represents the total OT pay
+                    overtimePay: safeOtAmount, // Separate field for pure OT
+                    allowanceTaxFree: 0,
                     otherIncome: 0,
                     bonus: 0,
-                    socialSecurityDeduction,
-                    taxDeduction: 0,
+                    socialSecurityDeduction: safeSocialSecurityDeduction,
+                    ssoEmployerContribution: safeSsoEmployerContribution,
+                    taxDeduction: safeTaxDeduction,
+                    deductions: safeStudentLoan, // Mapping remaining general deductions config to student loan temporarily
+                    ytdIncome: safeYtdIncome + safeBaseSalary + safeOtAmount,
+                    ytdTax: safeYtdTax + safeTaxDeduction,
                     lateDeduction: 0,
-                    deductions: 0,
-                    netSalary,
+                    netSalary: safeNetSalary,
                     status: "UNPAID" as const
                 });
             }

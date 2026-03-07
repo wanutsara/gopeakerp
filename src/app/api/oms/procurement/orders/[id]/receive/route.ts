@@ -3,15 +3,15 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function POST(request: Request, context: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getServerSession(authOptions);
         if (!session || !session.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // We must await context.params in Next.js 15 before using
-        const { id } = await context.params;
+        // We must await params in Next.js 15 before using
+        const { id } = await params;
         const data = await request.json();
 
         // data.receives = [{ purchaseOrderItemId: x, quantityReceiving: y, locationId: z, expirationDate: w }]

@@ -36,7 +36,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             idCardNumber, dob, gender, address, emergencyContact, emergencyRelation,
             mbti, enneagram, tshirtSize, foodAllergies,
             startDate, probationEndDate, managerId, phoneNumber,
-            customLat, customLng, customRadius, customWorkStart, customWorkEnd
+            customLat, customLng, customRadius, customWorkStart, customWorkEnd, companyBrandId
         } = body;
 
         // Transaction to update both employee and user
@@ -50,6 +50,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                     status,
                     bankAccount,
                     departmentId: departmentId || null,
+                    ...(companyBrandId !== undefined && { companyBrandId: companyBrandId || null }),
                     ...(image !== undefined && { image }),
                     ...(idCardNumber !== undefined && { idCardNumber }),
                     ...(dob !== undefined && { dob: dob ? new Date(dob) : null }),

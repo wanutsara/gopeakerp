@@ -129,6 +129,18 @@ model Employee {
   collaboratedInitiatives Initiative[]            @relation("InitiativeCollaborators")
   companyBrandId          String?
   companyBrand            CompanyBrand?           @relation(fields: [companyBrandId], references: [id])
+
+  // Phase 49B: HR & Payroll World-Class Updates
+  maritalStatus        String?
+  taxDeductions        Json?
+  studentLoanDeduction Float     @default(0)
+  idCardEncrypted      String?
+  bankAccountEncrypted String?
+  pdpaConsentDate      DateTime?
+
+  // --- 🎮 Gamification Engine (Phase 50) ---
+  attendanceStreak     Int       @default(0)
+  streakFreezes        Int       @default(1)
 }
 
 model Attendance {
@@ -239,6 +251,17 @@ model Payroll {
 
   disbursementId String?
   disbursement   Disbursement? @relation(fields: [disbursementId], references: [id])
+
+  // Phase 49B: Payroll Separation & Employer Contributions
+  overtimePay             Float @default(0)
+  allowanceTaxFree        Float @default(0)
+  ssoEmployerContribution Float @default(0)
+  providentFundEmployee   Float @default(0)
+  providentFundEmployer   Float @default(0)
+  ytdIncome               Float @default(0)
+  ytdTax                  Float @default(0)
+
+  @@unique([employeeId, month])
 }
 
 model EmployeeDocument {
@@ -422,27 +445,31 @@ model InventoryLog {
 }
 
 model Order {
-  id              String                @id @default(cuid())
-  customerId      String?
-  channel         SalesChannel
-  status          OrderStatus           @default(PENDING)
-  subtotal        Float
-  shippingFee     Float                 @default(0)
-  discount        Float                 @default(0)
-  total           Float
-  notes           String?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  isReconciled    Boolean               @default(false)
-  platformFee     Float                 @default(0)
-  platformOrderId String?
-  fulfillments    Fulfillment[]
-  customer        Customer?             @relation(fields: [customerId], references: [id])
-  items           OrderItem[]
-  reconciliations OrderReconciliation[]
-  returns         ReturnRequest[]
-  companyBrandId  String?
-  companyBrand    CompanyBrand?         @relation(fields: [companyBrandId], references: [id])
+  id                String                @id @default(cuid())
+  customerId        String?
+  channel           SalesChannel
+  status            OrderStatus           @default(PENDING)
+  subtotal          Float
+  shippingFee       Float                 @default(0)
+  discount          Float                 @default(0)
+  total             Float
+  isVatInclusive    Boolean               @default(true)
+  vatAmount         Float                 @default(0)
+  subtotalBeforeVat Float                 @default(0)
+  taxInvoiceNumber  String?               @unique
+  notes             String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  isReconciled      Boolean               @default(false)
+  platformFee       Float                 @default(0)
+  platformOrderId   String?
+  fulfillments      Fulfillment[]
+  customer          Customer?             @relation(fields: [customerId], references: [id])
+  items             OrderItem[]
+  reconciliations   OrderReconciliation[]
+  returns           ReturnRequest[]
+  companyBrandId    String?
+  companyBrand      CompanyBrand?         @relation(fields: [companyBrandId], references: [id])
 
   @@unique([platformOrderId, channel])
 }
@@ -515,6 +542,8 @@ model Transaction {
   type             TransactionType
   amount           Float                 @default(0)
   amountTHB        Float                 @default(0)
+  taxType          String? // e.g. "PND3", "PND53", "VAT_SALES", "VAT_PURCHASE"
+  taxAmount        Float                 @default(0)
   description      String?
   date             DateTime              @default(now())
   createdAt        DateTime              @default(now())
@@ -542,25 +571,29 @@ model OrderReconciliation {
 }
 
 model ExpenseRequest {
-  id           String        @id @default(uuid())
-  title        String
-  description  String?
-  amount       Float         @default(0)
-  status       ExpenseStatus @default(PENDING)
-  expectedDate DateTime?
-  category     String?
-  vendorName   String?
-  receiptUrl   String?
-  requestorId  String
-  departmentId String?
-  approverId   String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  items        ExpenseItem[]
-  approver     Employee?     @relation("ExpenseApprover", fields: [approverId], references: [id])
-  department   Department?   @relation(fields: [departmentId], references: [id])
-  requestor    Employee      @relation("ExpenseRequestor", fields: [requestorId], references: [id])
-  transaction  Transaction?
+  id            String        @id @default(uuid())
+  title         String
+  description   String?
+  amount        Float         @default(0)
+  whtRate       Float         @default(0)
+  whtAmount     Float         @default(0)
+  netPayable    Float         @default(0)
+  isVatRequired Boolean       @default(false)
+  status        ExpenseStatus @default(PENDING)
+  expectedDate  DateTime?
+  category      String?
+  vendorName    String?
+  receiptUrl    String?
+  requestorId   String
+  departmentId  String?
+  approverId    String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  items         ExpenseItem[]
+  approver      Employee?     @relation("ExpenseApprover", fields: [approverId], references: [id])
+  department    Department?   @relation(fields: [departmentId], references: [id])
+  requestor     Employee      @relation("ExpenseRequestor", fields: [requestorId], references: [id])
+  transaction   Transaction?
 
   disbursementId String?
   disbursement   Disbursement? @relation(fields: [disbursementId], references: [id])

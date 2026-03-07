@@ -28,11 +28,13 @@ export default function CreateEmployeePage() {
         bankAccount: "",
         status: "ACTIVE",
         departmentId: "",
+        companyBrandId: "",
         image: "",
         phoneNumber: ""
     });
 
     const { data: departments } = useSWR("/api/hr/departments", fetcher);
+    const { data: brands } = useSWR("/api/settings/brands", fetcher);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -192,6 +194,15 @@ export default function CreateEmployeePage() {
                                     <option value="">-- ไม่ระบุแผนก --</option>
                                     {departments && departments.map((dept: any) => (
                                         <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">สังกัดแบรนด์ (Company Brand)</label>
+                                <select name="companyBrandId" value={formData.companyBrandId} onChange={handleChange} className="w-full px-4 py-2.5 bg-indigo-50/50 border border-indigo-200 text-indigo-900 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition font-medium">
+                                    <option value="">🏢 ส่วนกลาง (HQ Cost Center / Shared Services)</option>
+                                    {brands?.map((brand: any) => (
+                                        <option key={brand.id} value={brand.id}>☕️ ประจำแบรนด์ {brand.name}</option>
                                     ))}
                                 </select>
                             </div>

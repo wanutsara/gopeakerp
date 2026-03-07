@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateTaxInvoiceNumber, calculateVAT } from '@/lib/invoicing';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
@@ -104,7 +105,12 @@ Respond STRICTLY in JSON format without markdown ticks.
         const responseText = generatedResult.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
         const aiInvoice = JSON.parse(responseText);
 
-        // 4. Prisma Transaction: Generate the Customer and the Order automatically
+        // 4. Calculate VAT and Tax Invoice Sequence (Thailand Context)
+        const finalTotal = aiInvoice.financials.calculatedTotal || 0;
+        const { subtotalBeforeVat, vatAmount } = calculateVAT(finalTotal, true); // Assume inclusive by default for Social Commerce
+        const taxInvoiceNumber = await generateTaxInvoiceNumber("INV");
+
+        // 5. Prisma Transaction: Generate the Customer and the Order automatically
         const createdOrder = await prisma.$transaction(async (tx) => {
 
             // Create or Find Customer (Simple creation for demo parser)
@@ -126,9 +132,13 @@ Respond STRICTLY in JSON format without markdown ticks.
                     customerId: customer.id,
                     channel: 'OTHER',
                     status: orderStatus,
-                    subtotal: aiInvoice.financials.calculatedTotal,
+                    subtotal: finalTotal, // legacy usage, now identical to total
                     shippingFee: 0,
-                    total: aiInvoice.financials.calculatedTotal,
+                    total: finalTotal,
+                    isVatInclusive: true,
+                    vatAmount: vatAmount,
+                    subtotalBeforeVat: subtotalBeforeVat,
+                    taxInvoiceNumber: taxInvoiceNumber,
                     notes: `AI Generated via Omni-Channel Parser. Confidence: ${aiInvoice.aiConfidenceScore}/100.`
                 }
             });

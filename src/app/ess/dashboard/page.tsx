@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 import confetti from "canvas-confetti";
+import { motion, AnimatePresence } from "framer-motion";
 
 const fetcher = async (url: string) => {
     const res = await fetch(url);
@@ -150,6 +151,37 @@ export default function PortalDashboard() {
         }
     };
 
+    // Quest Management State
+    const { data: questsData, mutate: mutateQuests } = useSWR("/api/ess/quests", fetcher);
+    const [isSubmittingQuest, setIsSubmittingQuest] = useState<string | null>(null);
+
+    const handleQuestAction = async (questId: string, action: 'claim' | 'submit') => {
+        setIsSubmittingQuest(questId);
+        try {
+            const res = await fetch("/api/ess/quests", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ questId, action })
+            });
+            if (!res.ok) throw new Error("Failed to update quest");
+            mutateQuests();
+            if (action === 'claim') {
+                setSuccessMsg("🎉 รับภารกิจสำเร็จ! ลุยเลย");
+                // Micro-dopamine hit for accepting a quest
+                confetti({ particleCount: 30, spread: 40, origin: { y: 0.7 }, colors: ['#f43f5e', '#ec4899'] });
+            } else if (action === 'submit') {
+                setSuccessMsg("ส่งมอบเควสต์ รอการตรวจสอบ (Review) 🛡️");
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            }
+        } catch (error) {
+            console.error(error);
+            alert("เกิดข้อผิดพลาด กรุณาลองใหม่");
+        } finally {
+            setIsSubmittingQuest(null);
+            setTimeout(() => setSuccessMsg(""), 3000);
+        }
+    };
+
     // Expense Management State
     const { data: expenseData, mutate: mutateExpense } = useSWR("/api/ess/expenses", fetcher);
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -213,12 +245,22 @@ export default function PortalDashboard() {
     const handleMoodSubmit = async (moodType: string) => {
         setIsSubmittingMood(true);
         try {
-            await fetch("/api/ess/mood", {
+            const res = await fetch("/api/ess/mood", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ mood: moodType })
             });
+            const responseData = await res.json();
+
+            // Re-fetch to update XP bar instantly
+            mutate();
             mutateMood();
+
+            // Fire confetti if XP was gained
+            if (responseData.xp && responseData.xp.expGained > 0) {
+                confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 }, colors: ['#a855f7', '#6366f1'] });
+            }
+
         } catch (error) {
             console.error(error);
         } finally {
@@ -236,10 +278,19 @@ export default function PortalDashboard() {
                 body: JSON.stringify(kudosForm)
             });
             if (!res.ok) throw new Error(await res.text());
+
+            const responseData = await res.json();
+
+            mutate(); // Re-fetch main profile for XP updates
             mutateKudos();
-            setSuccessMsg("ส่งคำชื่นชมสำเร็จ! 🎉");
+            setSuccessMsg("ส่งคำชื่นชมและได้รับ EXP พิเศษ! 🎉");
             setIsKudosModalOpen(false);
             setKudosForm({ receiverId: "", badgeType: "THANK_YOU", message: "" });
+
+            // Fire Confetti
+            if (responseData.xp?.sender?.expGained > 0) {
+                confetti({ particleCount: 80, spread: 90, origin: { y: 0.6 }, colors: ['#f59e0b', '#fbbf24'] });
+            }
         } catch (error: any) {
             alert(error.message || "เกิดข้อผิดพลาด");
         } finally {
@@ -461,22 +512,67 @@ export default function PortalDashboard() {
                 </div>
             )}
 
-            {/* User Profile Card */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100/60 text-center relative">
-                <div className="absolute top-4 right-4">
+            {/* Gamified User Profile Target & Level Card */}
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100/60 text-center relative overflow-hidden">
+                <div className="absolute top-4 right-4 z-10">
                     <button
                         onClick={() => setIsPasswordModalOpen(true)}
                         className="p-2 bg-gray-50 text-gray-500 rounded-full hover:bg-gray-100 hover:text-gray-900 transition flex items-center gap-2 text-xs font-semibold"
                         title="เปลี่ยนรหัสผ่าน"
                     >
-                        <span className="text-sm">🔑</span> เปลี่ยนรหัสผ่าน
+                        <span className="text-sm">🔑</span>
                     </button>
                 </div>
-                <div className="w-20 h-20 mx-auto bg-gradient-to-tr from-blue-500 to-cyan-400 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-inner mb-4">
-                    {employee.user.name?.charAt(0) || "U"}
+
+                <div className="relative inline-block mb-3">
+                    <div className="w-24 h-24 mx-auto bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg border-4 border-white relative z-10">
+                        {employee.user.name?.charAt(0) || "U"}
+                    </div>
+                    {/* Level Badge */}
+                    <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-[11px] font-black px-3 py-1.5 rounded-full shadow-md border-2 border-white z-20 transform rotate-[-5deg] tracking-wider outline-none">
+                        LV.{employee.level || 1}
+                    </div>
                 </div>
+
                 <h2 className="text-xl font-bold text-gray-900 leading-tight">{employee.user.name}</h2>
-                <p className="text-sm text-gray-500 mt-1">{employee.position} &bull; {employee.department?.name || "ไม่มีสังกัด"}</p>
+                <p className="text-sm text-gray-500 mt-1 mb-5">{employee.position} &bull; {employee.department?.name || "ไม่มีสังกัด"}</p>
+
+                {/* EXP progression Bar */}
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100/80">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Experience Points</span>
+                        <span className="text-xs font-bold text-indigo-600">{employee.currentExp || 0} / 100 XP</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden shadow-inner relative">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min(100, (employee.currentExp || 0))}%` }}
+                            transition={{ duration: 1.5, type: "spring", bounce: 0.2 }}
+                            className="bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 h-3 rounded-full relative"
+                        >
+                            <div className="absolute top-0 right-0 bottom-0 left-0 bg-white/20 animate-pulse"></div>
+                        </motion.div>
+                    </div>
+
+                    {/* Psychology Badges: Streaks and Shields */}
+                    <div className="mt-4 flex justify-around text-center pt-4 border-t border-gray-100/80">
+                        <div className="flex flex-col items-center group cursor-pointer">
+                            <span className="text-xl mb-1 group-hover:scale-110 transition-transform">🔥</span>
+                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wide">Day Streak</span>
+                            <span className="text-sm font-black text-orange-500">{employee.attendanceStreak || 0}</span>
+                        </div>
+                        <div className="flex flex-col items-center group cursor-pointer">
+                            <span className="text-xl mb-1 group-hover:scale-110 transition-transform">🛡️</span>
+                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wide">Ice Shields</span>
+                            <span className="text-sm font-black text-teal-500">{employee.streakFreezes || 0}</span>
+                        </div>
+                        <div className="flex flex-col items-center group cursor-pointer">
+                            <span className="text-xl mb-1 group-hover:scale-110 transition-transform">🪙</span>
+                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wide">Quest Coins</span>
+                            <span className="text-sm font-black text-amber-500">0</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Daily Mood Check-in Widget */}
@@ -556,6 +652,96 @@ export default function PortalDashboard() {
                     </div>
                 )}
             </div>
+
+            {/* Daily Action Quests Widget */}
+            {(questsData?.myQuests?.length > 0 || questsData?.openQuests?.length > 0) && (
+                <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-3xl p-6 shadow-lg border border-indigo-500/30 relative overflow-hidden">
+                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+                    <div className="flex justify-between items-center mb-5 relative z-10">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2 drop-shadow-md">
+                            <span className="text-2xl">⚔️</span> Daily Action Quests
+                        </h3>
+                    </div>
+
+                    <div className="space-y-3 relative z-10">
+                        <AnimatePresence>
+                            {/* My Active Quests */}
+                            {questsData?.myQuests?.filter((log: any) => log.status === 'IN_PROGRESS' || log.status === 'REVIEWING').map((log: any) => (
+                                <motion.div
+                                    key={log.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 relative"
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex-1 pr-3">
+                                            <h4 className="font-bold text-sm text-indigo-100">{log.quest.title}</h4>
+                                            <p className="text-[10px] text-indigo-300 mt-1 line-clamp-2">{log.quest.description}</p>
+                                        </div>
+                                        <div className="bg-yellow-500/20 border border-yellow-500/50 text-yellow-300 px-2 py-1 rounded-lg flex items-center gap-1 shrink-0 shadow-inner">
+                                            <span className="text-xs">⚡</span>
+                                            <span className="text-[10px] font-black">{log.quest.expReward} XP</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 flex gap-2">
+                                        {log.status === 'IN_PROGRESS' ? (
+                                            <button
+                                                onClick={() => handleQuestAction(log.questId, 'submit')}
+                                                disabled={isSubmittingQuest === log.questId}
+                                                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white text-xs font-bold py-2.5 rounded-xl shadow-md transform transition-all active:scale-95 disabled:opacity-50"
+                                            >
+                                                {isSubmittingQuest === log.questId ? "กำลังส่งมอบ..." : "ส่งมอบภารกิจ (Submit)"}
+                                            </button>
+                                        ) : (
+                                            <div className="w-full bg-white/5 border border-white/10 text-indigo-200 text-xs font-bold py-2.5 rounded-xl text-center flex items-center justify-center gap-2 backdrop-blur-sm">
+                                                <div className="w-3 h-3 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></div>
+                                                ตรวจประเมินผล... (Reviewing)
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            ))}
+
+                            {/* Open Quests available to Claim */}
+                            {questsData?.openQuests?.slice(0, 3).map((quest: any) => (
+                                <motion.div
+                                    key={quest.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-4 border border-slate-700/50 relative overflow-hidden group"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    <div className="flex justify-between items-start mb-2 relative z-10">
+                                        <div className="flex-1 pr-3">
+                                            <h4 className="font-bold text-sm text-slate-200 group-hover:text-fuchsia-300 transition-colors">{quest.title}</h4>
+                                            <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">{quest.description}</p>
+                                        </div>
+                                        <div className="bg-slate-700 text-slate-300 px-2 py-1 rounded-lg flex flex-col items-center shrink-0">
+                                            <span className="text-[10px] font-black">{quest.expReward} XP</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleQuestAction(quest.id, 'claim')}
+                                        disabled={isSubmittingQuest === quest.id}
+                                        className="mt-3 w-full bg-slate-700 hover:bg-fuchsia-600 hover:text-white text-slate-300 text-xs font-bold py-2 rounded-xl border border-slate-600 hover:border-fuchsia-500 transition-all active:scale-95 disabled:opacity-50"
+                                    >
+                                        รับภารกิจ (Claim Quest)
+                                    </button>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+
+                        {questsData?.myQuests?.length === 0 && questsData?.openQuests?.length === 0 && (
+                            <div className="text-center py-6 text-indigo-300/60 text-sm font-medium">
+                                ไม่มีภารกิจใหม่ในขณะนี้ วีรบุรุษได้พักผ่อน 🏕️
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* My Goals & KPIs Widget */}
             {goalsData && goalsData.length > 0 && (

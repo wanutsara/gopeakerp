@@ -11,13 +11,13 @@ export async function GET() {
         // 1. Fetch Approved but Unpaid Expenses
         const expenses = await prisma.expenseRequest.findMany({
             where: { status: 'APPROVED', disbursementId: null },
-            include: { requestor: true, department: true }
+            include: { requestor: { include: { user: true } }, department: true }
         });
 
         // 2. Fetch Approved but Unpaid Payrolls
         const payrolls = await prisma.payroll.findMany({
             where: { status: 'UNPAID', disbursementId: null },
-            include: { employee: true }
+            include: { employee: { include: { user: true } } }
         });
 
         // 3. Fetch Issued POs (Unpaid if not linked to a disbursement)
@@ -37,15 +37,15 @@ export async function GET() {
                 title: e.title,
                 amount: e.amount,
                 date: e.createdAt,
-                payee: `${e.requestor.firstName} ${e.requestor.lastName}`
+                payee: e.requestor.user?.name || 'Unknown Employee'
             })),
             ...payrolls.map(p => ({
                 type: 'PAYROLL',
                 id: p.id,
                 title: `Payroll ${p.month}`,
                 amount: p.netSalary,
-                date: p.createdAt,
-                payee: `${p.employee.firstName} ${p.employee.lastName}`
+                date: new Date(`${p.month}-01`),
+                payee: p.employee.user?.name || 'Unknown Employee'
             })),
             ...purchaseOrders.map(po => ({
                 type: 'PO',

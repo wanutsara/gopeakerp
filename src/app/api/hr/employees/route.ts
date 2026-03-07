@@ -27,7 +27,7 @@ export async function POST(request: Request) {
             employeeType, position, wageRate, status, bankAccount, image, departmentId,
             idCardNumber, dob, gender, address, emergencyContact, emergencyRelation,
             mbti, enneagram, tshirtSize, foodAllergies,
-            startDate, probationEndDate, managerId, phoneNumber
+            startDate, probationEndDate, managerId, phoneNumber, companyBrandId
         } = body;
 
         if (!name || !email) {
@@ -59,6 +59,7 @@ export async function POST(request: Request) {
                     status: status || "ACTIVE",
                     bankAccount,
                     departmentId: departmentId || null,
+                    companyBrandId: companyBrandId || null,
                     idCardNumber: idCardNumber ? idCardNumber : null,
                     dob: dob ? new Date(dob) : null,
                     gender: gender || null,

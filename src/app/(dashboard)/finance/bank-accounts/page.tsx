@@ -7,6 +7,18 @@ import { toast } from 'react-hot-toast';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
+export const THAI_BANKS = [
+    { code: 'KBANK', name: 'Kasikornbank (กสิกรไทย)', color: 'bg-[#00A950]', border: 'border-[#008A40]', icon: '🟢', text: 'text-white' },
+    { code: 'SCB', name: 'Siam Commercial Bank (ไทยพาณิชย์)', color: 'bg-[#4E2A84]', border: 'border-[#3D206B]', icon: '🟣', text: 'text-white' },
+    { code: 'BBL', name: 'Bangkok Bank (กรุงเทพ)', color: 'bg-[#1E4598]', border: 'border-[#14316D]', icon: '🔵', text: 'text-white' },
+    { code: 'KTB', name: 'Krungthai Bank (กรุงไทย)', color: 'bg-[#00aeeef]', border: 'border-[#008CBB]', icon: '🩵', text: 'text-white' },
+    { code: 'BAY', name: 'Bank of Ayudhya (กรุงศรี)', color: 'bg-[#FEC43B]', border: 'border-[#DAA222]', icon: '🟡', text: 'text-gray-900' },
+    { code: 'TTB', name: 'TMBThanachart Bank (ทหารไทยธนชาต)', color: 'bg-[#0050F0]', border: 'border-[#003CB5]', icon: '🟠', text: 'text-white' },
+    { code: 'GSB', name: 'Government Savings Bank (ออมสิน)', color: 'bg-[#EB198C]', border: 'border-[#C41372]', icon: '🩷', text: 'text-white' },
+    { code: 'KSB', name: 'Kiatnakin Phatra (เกียรตินาคิน)', color: 'bg-[#6D6E71]', border: 'border-[#4D4E50]', icon: '⚪', text: 'text-white' },
+    { code: 'CIMBT', name: 'CIMB Thai (ซีไอเอ็มบี)', color: 'bg-[#7E212E]', border: 'border-[#5C161F]', icon: '🔴', text: 'text-white' }
+];
+
 export default function BankAccountsDashboard() {
     const { activeBrandId, brands } = useBrand();
 
@@ -101,33 +113,44 @@ export default function BankAccountsDashboard() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {accounts?.map((acc: any) => (
-                        <div key={acc.id} className="group bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden hover:-translate-y-1">
-                            <div className="absolute top-0 right-0 p-4 opacity-50 text-5xl group-hover:scale-110 transition-transform duration-500">🏛️</div>
+                    {accounts?.map((acc: any) => {
+                        const bankDef = THAI_BANKS.find(b => b.code === acc.bankName) || { color: 'bg-white', border: 'border-gray-200', icon: '🏛️', text: 'text-gray-800', name: acc.bankName };
 
-                            <div className="relative z-10">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-wider rounded-md border border-gray-200">
-                                        {acc.companyBrand?.name || 'Unassigned'}
-                                    </span>
-                                    {acc.companyBrand?.isHQ && (
-                                        <span className="px-2 py-1 bg-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-wider rounded-md">HQ</span>
-                                    )}
+                        return (
+                            <div key={acc.id} className={`group ${bankDef.color === 'bg-white' ? 'bg-white' : bankDef.color + ' ' + bankDef.text} p-6 rounded-3xl border-2 ${bankDef.border} shadow-sm hover:shadow-2xl transition-all duration-300 relative overflow-hidden hover:-translate-y-1 flex flex-col`}>
+                                <div className="absolute top-0 right-0 p-4 opacity-30 text-6xl group-hover:scale-110 transition-transform duration-500">{bankDef.icon}</div>
+
+                                <div className="relative z-10 flex-1">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <span className="px-2 py-1 bg-white/20 text-[10px] font-black uppercase tracking-wider rounded-md border border-white/30 backdrop-blur-sm">
+                                            {acc.companyBrand?.name || 'Unassigned'}
+                                        </span>
+                                        {acc.companyBrand?.isHQ && (
+                                            <span className="px-2 py-1 bg-white/20 text-[10px] font-black uppercase tracking-wider rounded-md shadow-sm backdrop-blur-sm">HQ</span>
+                                        )}
+                                    </div>
+
+                                    <h3 className="text-xl font-black mb-1 drop-shadow-sm">{bankDef.name}</h3>
+                                    <p className="text-sm font-mono tracking-widest opacity-90">{acc.accountNumber}</p>
+                                    <p className="text-xs font-bold mt-1 uppercase opacity-70">{acc.accountName}</p>
+                                    {acc.branch && <p className="text-[10px] opacity-60 mt-0.5">สาขา {acc.branch}</p>}
                                 </div>
 
-                                <h3 className="text-xl font-black text-gray-800 mb-1">{acc.bankName}</h3>
-                                <p className="text-sm font-mono text-gray-500 tracking-widest">{acc.accountNumber}</p>
-                                <p className="text-xs font-bold text-gray-400 mt-1 uppercase">{acc.accountName}</p>
-
-                                <div className="mt-8 pt-6 border-t border-gray-50 flex justify-between items-end">
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Live Balance</span>
-                                    <span className={`text-xl font-black ${acc.computedBalance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
-                                        {currencyFormatter.format(acc.computedBalance || 0)}
-                                    </span>
+                                <div className="relative z-10 mt-8 pt-6 border-t border-white/20 flex flex-col gap-4">
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-xs font-bold uppercase tracking-wider opacity-80">Live Balance</span>
+                                        <span className={`text-2xl font-black drop-shadow-sm ${acc.computedBalance < 0 ? 'text-red-300' : ''}`}>
+                                            {currencyFormatter.format(acc.computedBalance || 0)}
+                                        </span>
+                                    </div>
+                                    <a href={`/finance/bank-accounts/${acc.id}`} className="w-full text-center py-2.5 bg-black/20 hover:bg-black/40 rounded-xl font-bold text-sm backdrop-blur-md transition-colors border border-white/10 shadow-sm flex items-center justify-center gap-2">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                        Manage Statements
+                                    </a>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        )
+                    })}
 
                     {accounts?.length === 0 && (
                         <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-[3rem] bg-gray-50/50">
@@ -171,11 +194,16 @@ export default function BankAccountsDashboard() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Bank Name</label>
-                                    <input
-                                        type="text" required placeholder="e.g. KBank"
+                                    <select
+                                        required
                                         value={formData.bankName} onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
                                         className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-emerald-500 focus:border-emerald-500 block p-3 font-bold"
-                                    />
+                                    >
+                                        <option value="" disabled>Select Bank...</option>
+                                        {THAI_BANKS.map(bank => (
+                                            <option key={bank.code} value={bank.code}>{bank.icon} {bank.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Branch</label>

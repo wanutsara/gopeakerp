@@ -28,9 +28,9 @@ export default function CashFlowDashboard() {
 
     // Charts Data Prep
     const pieData = {
-        labels: analytics.channelSales.map((c: any) => c.channel),
+        labels: (analytics?.channelSales || []).map((c: any) => c.channel),
         datasets: [{
-            data: analytics.channelSales.map((c: any) => c.revenue),
+            data: (analytics?.channelSales || []).map((c: any) => c.revenue),
             backgroundColor: ['#3b82f6', '#f97316', '#000000', '#22c55e', '#ec4899', '#8b5cf6'],
             borderWidth: 0,
         }]
@@ -71,7 +71,7 @@ export default function CashFlowDashboard() {
                     <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">ยอดขายรวมสุทธิ (Sales Revenue)</p>
                     <p className="text-4xl font-extrabold text-gray-900 mt-2">
                         <span className="text-2xl text-gray-400 mr-1">฿</span>
-                        {analytics.channelSales.reduce((acc: number, c: any) => acc + c.revenue, 0).toLocaleString()}
+                        {(analytics?.channelSales || []).reduce((acc: number, c: any) => acc + c.revenue, 0).toLocaleString()}
                     </p>
                     <p className="text-xs font-medium text-blue-600 mt-2 bg-blue-50 inline-block px-2 py-1 rounded">จากทุกแพลตฟอร์ม</p>
                 </div>
@@ -116,13 +116,13 @@ export default function CashFlowDashboard() {
                         <ChartPieIcon className="w-5 h-5 text-indigo-500" />
                         สัดส่วนรายได้ตามแพลตฟอร์ม (Revenue)
                     </h3>
-                    {analytics.channelSales.length > 0 ? (
+                    {(analytics?.channelSales || []).length > 0 ? (
                         <div className="relative h-64 w-full flex justify-center mt-4">
                             <Doughnut data={pieData} options={{ maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }} />
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-[-30px]">
                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total</span>
                                 <span className="text-2xl font-black text-gray-900">
-                                    {analytics.channelSales.reduce((acc: number, c: any) => acc + c.orders, 0).toLocaleString()}
+                                    {(analytics?.channelSales || []).reduce((acc: number, c: any) => acc + c.orders, 0).toLocaleString()}
                                 </span>
                                 <span className="text-xs font-medium text-gray-500">Orders</span>
                             </div>
@@ -150,14 +150,14 @@ export default function CashFlowDashboard() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {analytics.topProducts.map((p: any, idx: number) => (
+                                {(analytics?.topProducts || []).map((p: any, idx: number) => (
                                     <tr key={idx} className="hover:bg-gray-50/50">
                                         <td className="px-4 py-3 font-bold text-gray-400">#{idx + 1}</td>
                                         <td className="px-4 py-3 font-medium text-gray-900">{p.name}</td>
                                         <td className="px-4 py-3 text-right font-bold text-blue-600">{p.quantity.toLocaleString()}</td>
                                     </tr>
                                 ))}
-                                {analytics.topProducts.length === 0 && (
+                                {(analytics?.topProducts || []).length === 0 && (
                                     <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-500">ไม่มีข้อมูลออร์เดอร์</td></tr>
                                 )}
                             </tbody>
@@ -222,12 +222,12 @@ export default function CashFlowDashboard() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {transactions.length === 0 ? (
+                            {(transactions || []).length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-8 text-center text-gray-500">ไม่มีประวัติรุกรรมกระแสเงินสด</td>
                                 </tr>
                             ) : (
-                                transactions.map((tx: any) => (
+                                (transactions || []).map((tx: any) => (
                                     <tr key={tx.id} className="hover:bg-gray-50/50">
                                         <td className="px-6 py-3 text-gray-500">{new Date(tx.date).toLocaleDateString('th-TH')}</td>
                                         <td className="px-6 py-3">

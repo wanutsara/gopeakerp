@@ -66,11 +66,32 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Title is required" }, { status: 400 });
         }
 
+        // --- Smart Categorization: WHT Mapping (Thailand Context) ---
+        let whtRate = 0;
+        const normalizedCategory = (category || "").toLowerCase();
+
+        if (normalizedCategory.includes("โฆษณา") || normalizedCategory.includes("advertising")) {
+            whtRate = 2; // ค่าโฆษณา 2%
+        } else if (normalizedCategory.includes("จ้างทำของ") || normalizedCategory.includes("service") || normalizedCategory.includes("บริการ")) {
+            whtRate = 3; // ค่าจ้างทำของ/บริการ 3%
+        } else if (normalizedCategory.includes("เช่า") || normalizedCategory.includes("rent")) {
+            whtRate = 5; // ค่าเช่า 5%
+        } else if (normalizedCategory.includes("ขนส่ง") || normalizedCategory.includes("transport")) {
+            whtRate = 1; // ค่าขนส่ง 1%
+        }
+
+        const whtAmount = amount * (whtRate / 100);
+        const netPayable = amount - whtAmount;
+        // -------------------------------------------------------------
+
         const newRequest = await prisma.expenseRequest.create({
             data: {
                 title,
                 description,
                 amount,
+                whtRate,
+                whtAmount,
+                netPayable,
                 category,
                 vendorName,
                 receiptUrl,
