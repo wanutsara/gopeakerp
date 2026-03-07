@@ -62,6 +62,18 @@ export async function POST(req: NextRequest) {
             }
         });
 
+        const startDate = new Date(`${body.month}-01T00:00:00.000Z`);
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1);
+
+        // Fetch all attendance for this month to count exact working days for DAILY employees
+        const monthAttendances = await prisma.attendance.findMany({
+            where: {
+                date: { gte: startDate, lt: endDate },
+                checkIn: { not: null }
+            }
+        });
+
         // 2. Determine existing payrolls for this month to avoid duplicates
         const existingPayrolls = await prisma.payroll.findMany({
             where: { month }
@@ -74,8 +86,21 @@ export async function POST(req: NextRequest) {
 
         for (const emp of activeEmployees) {
             if (!existingEmployeeIds.includes(emp.id)) {
-                // 1. Base Salary with Mid-Month Proxy (Assuming full month for now, real systems check attendance/start date)
-                const baseSalary = emp.employeeType === 'MONTHLY' ? emp.wageRate : (emp.wageRate * 22);
+                // 1. Base Salary Engine
+                let baseSalary = 0;
+                let daysWorked = 0;
+
+                if (emp.employeeType === 'MONTHLY') {
+                    baseSalary = emp.wageRate;
+                } else {
+                    // Filter this specific employee's attendance
+                    const empAttendance = monthAttendances.filter(a => a.employeeId === emp.id);
+                    // De-duplicate attendances by day to prevent double-counting if they check-in twice a day
+                    const uniqueDays = new Set(empAttendance.map(a => a.date.toISOString().split('T')[0]));
+                    daysWorked = uniqueDays.size;
+
+                    baseSalary = emp.wageRate * daysWorked;
+                }
 
                 // 2. Fetch Year-to-Date (YTD) aggregates for PND.1 progressive taxation
                 const ytdPayrolls = await prisma.payroll.findMany({
@@ -93,10 +118,6 @@ export async function POST(req: NextRequest) {
                 }
 
                 // 4. Overtime (Taxable but NON-SSO)
-                const startDate = new Date(`${month}-01`);
-                const endDate = new Date(startDate);
-                endDate.setMonth(endDate.getMonth() + 1);
-
                 const otRequests = await prisma.overtimeRequest.findMany({
                     where: { employeeId: emp.id, status: "APPROVED", date: { gte: startDate, lt: endDate } }
                 });

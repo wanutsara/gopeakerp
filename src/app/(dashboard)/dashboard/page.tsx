@@ -43,6 +43,13 @@ export default async function DashboardPage() {
         where: { month: currentMonthStr }
     });
 
+    const monthAttendances = await prisma.attendance.findMany({
+        where: {
+            date: { gte: startOfMonth, lte: endOfMonth },
+            checkIn: { not: null }
+        }
+    });
+
     let totalPayroll = 0;
     const positionPayrollAccumulator: Record<string, number> = {};
 
@@ -56,7 +63,13 @@ export default async function DashboardPage() {
         });
     } else {
         employees.forEach(emp => {
-            let approxMonthlyWage = emp.employeeType === 'MONTHLY' ? emp.wageRate : (emp.wageRate * 22);
+            let daysWorked = 0;
+            if (emp.employeeType !== 'MONTHLY') {
+                const empAttendance = monthAttendances.filter(a => a.employeeId === emp.id);
+                const uniqueDays = new Set(empAttendance.map(a => new Date(a.date).toISOString().split('T')[0]));
+                daysWorked = uniqueDays.size;
+            }
+            let approxMonthlyWage = emp.employeeType === 'MONTHLY' ? emp.wageRate : (emp.wageRate * daysWorked);
             totalPayroll += approxMonthlyWage;
             const pos = emp.position || "ไม่ได้ระบุตำแหน่ง";
             if (!positionPayrollAccumulator[pos]) positionPayrollAccumulator[pos] = 0;
