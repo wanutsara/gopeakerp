@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { BanknotesIcon, ArrowTrendingUpIcon, DocumentTextIcon, ChartPieIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { BanknotesIcon, ArrowTrendingUpIcon, DocumentTextIcon, ChartPieIcon, PlusIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
 
@@ -22,6 +22,11 @@ export default function CashFlowDashboard() {
     const [isAddingTx, setIsAddingTx] = useState(false);
     const [txForm, setTxForm] = useState({ type: "INCOME", amount: "", category: "SALES_REVENUE", description: "" });
     const [loadingTx, setLoadingTx] = useState(false);
+
+    // Edit Add Delete States
+    const [editTx, setEditTx] = useState<any>(null);
+    const [deleteTx, setDeleteTx] = useState<any>(null);
+    const [loadingAction, setLoadingAction] = useState(false);
 
     if (analyticsError) return <div className="p-8 text-red-500">Failed to load financial data.</div>;
     if (!analytics || !transactions) return <div className="p-8 text-gray-500 animate-pulse">Analyzing Cash Flow...</div>;
@@ -52,6 +57,39 @@ export default function CashFlowDashboard() {
             alert("Error saving transaction");
         } finally {
             setLoadingTx(false);
+        }
+    };
+
+    const handleEditSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoadingAction(true);
+        try {
+            await fetch(`/api/finance/transactions/${editTx.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(editTx)
+            });
+            mutateTx();
+            setEditTx(null);
+        } catch (err) {
+            alert("Error updating");
+        } finally {
+            setLoadingAction(false);
+        }
+    };
+
+    const handleDeleteConfirm = async () => {
+        setLoadingAction(true);
+        try {
+            await fetch(`/api/finance/transactions/${deleteTx.id}`, {
+                method: "DELETE"
+            });
+            mutateTx();
+            setDeleteTx(null);
+        } catch (err) {
+            alert("Error deleting");
+        } finally {
+            setLoadingAction(false);
         }
     };
 
@@ -238,8 +276,16 @@ export default function CashFlowDashboard() {
                                         </td>
                                         <td className="px-6 py-3 text-gray-600 text-xs">{tx.category}</td>
                                         <td className="px-6 py-3 font-medium text-gray-900">{tx.description}</td>
-                                        <td className={`px-6 py-3 text-right font-bold ${tx.type === "INCOME" ? "text-green-600" : "text-red-600"}`}>
-                                            {tx.type === "INCOME" ? "+" : "-"}฿{tx.amountTHB.toLocaleString()}
+                                        <td className="px-6 py-3">
+                                            <div className="flex items-center justify-end gap-3">
+                                                <span className={`font-bold ${tx.type === "INCOME" ? "text-green-600" : "text-red-600"}`}>
+                                                    {tx.type === "INCOME" ? "+" : "-"}฿{tx.amountTHB.toLocaleString()}
+                                                </span>
+                                                <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => setEditTx({ ...tx, date: new Date(tx.date).toISOString().split('T')[0] })} className="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded"><PencilSquareIcon className="w-4 h-4" /></button>
+                                                    <button onClick={() => setDeleteTx(tx)} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"><TrashIcon className="w-4 h-4" /></button>
+                                                </div>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -248,6 +294,72 @@ export default function CashFlowDashboard() {
                     </table>
                 </div>
             </div>
+
+            {/* Edit Modal */}
+            {editTx && (
+                <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <form onSubmit={handleEditSave} className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in duration-200 p-6 space-y-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-gray-900">แก้ไขบันทึก (Edit Record)</h3>
+                            <button type="button" onClick={() => setEditTx(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">ประเภท</label>
+                                <select value={editTx.type} onChange={e => setEditTx({ ...editTx, type: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 uppercase font-medium">
+                                    <option value="INCOME">รายรับ (Income)</option>
+                                    <option value="EXPENSE">รายจ่าย (Expense)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">หมวดหมู่</label>
+                                <input value={editTx.category || ""} onChange={e => setEditTx({ ...editTx, category: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm uppercase" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">รายละเอียด</label>
+                            <input value={editTx.description || ""} onChange={e => setEditTx({ ...editTx, description: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">จำนวนเงิน (บาท)</label>
+                                <input type="number" step="0.01" value={editTx.amount} onChange={e => setEditTx({ ...editTx, amount: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">วันที่รับ/จ่าย</label>
+                                <input type="date" value={editTx.date} onChange={e => setEditTx({ ...editTx, date: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                            </div>
+                        </div>
+                        <div className="pt-4 flex justify-end gap-3">
+                            <button type="button" onClick={() => setEditTx(null)} disabled={loadingAction} className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors">ยกเลิก</button>
+                            <button type="submit" disabled={loadingAction} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center justify-center min-w-[120px]">
+                                {loadingAction ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'บันทึกการแก้ไข'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* Delete Modal */}
+            {deleteTx && (
+                <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl relative border border-gray-100 flex flex-col items-center text-center animate-in fade-in duration-200">
+                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 border-8 border-red-50/50">
+                            <TrashIcon className="w-7 h-7 text-red-600" />
+                        </div>
+                        <h3 className="text-xl font-black text-gray-900 mb-2">ลบรายการบัญชี?</h3>
+                        <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+                            รายการ <b>"{deleteTx.description}"</b> จำนวน <b className={deleteTx.type === "INCOME" ? "text-green-600" : "text-red-600"}>฿{deleteTx.amountTHB?.toLocaleString()}</b> จะถูกลบถาวรจากกระแสเงินสด แน่ใจหรือไม่?
+                        </p>
+                        <div className="flex w-full gap-3">
+                            <button onClick={() => setDeleteTx(null)} disabled={loadingAction} className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all">ยกเลิก</button>
+                            <button onClick={handleDeleteConfirm} disabled={loadingAction} className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center">
+                                {loadingAction ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'ยืนยัน'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
