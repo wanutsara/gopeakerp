@@ -12,6 +12,10 @@ export async function GET() {
             where: { email: session.user.email! }
         });
 
+        if (!user) {
+            return new NextResponse("User profile not mapped", { status: 401 });
+        }
+
         let brands;
 
         if (user?.role === 'MANAGER' || user?.role === 'OWNER') {
