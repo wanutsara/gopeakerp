@@ -7,13 +7,14 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     if (!process.env.GEMINI_API_KEY) {
         return NextResponse.json({ error: "System Error: Missing GEMINI_API_KEY in Environment. Please update your .env file." }, { status: 500 });
     }
 
     try {
+        const { id } = await params;
         const formData = await request.formData();
         const file = formData.get("file") as File;
 
@@ -22,7 +23,7 @@ export async function POST(
         }
 
         const bankAccount = await prisma.bankAccount.findUnique({
-            where: { id: params.id }
+            where: { id }
         });
 
         if (!bankAccount) {

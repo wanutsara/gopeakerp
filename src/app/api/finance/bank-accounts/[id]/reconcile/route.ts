@@ -3,9 +3,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const body = await request.json();
         const { stagedItems } = body;
 
@@ -14,7 +15,7 @@ export async function POST(
         }
 
         const bankAccount = await prisma.bankAccount.findUnique({
-            where: { id: params.id }
+            where: { id }
         });
 
         if (!bankAccount) {
