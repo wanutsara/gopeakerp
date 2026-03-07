@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { UsersIcon, MapPinIcon, CurrencyDollarIcon, StarIcon, MagnifyingGlassIcon, AdjustmentsHorizontalIcon, GlobeAsiaAustraliaIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { UsersIcon, MapPinIcon, CurrencyDollarIcon, StarIcon, MagnifyingGlassIcon, AdjustmentsHorizontalIcon, GlobeAsiaAustraliaIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import CustomerDrawer from './CustomerDrawer';
 import AudienceMap from './AudienceMap';
 
@@ -23,6 +23,10 @@ export default function CustomerDirectoryPage() {
     const [geoStats, setGeoStats] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    // Delete Confirmation State
+    const [customerToDelete, setCustomerToDelete] = useState<any>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Filters
     const [search, setSearch] = useState('');
@@ -55,6 +59,28 @@ export default function CustomerDirectoryPage() {
     // Quick Stats Calculation
     const totalRevenue = customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0);
     const vipCount = customers.filter(c => (c.totalSpent || 0) > 1000).length;
+
+    // Delete Logic
+    const confirmDelete = (customer: any, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setCustomerToDelete(customer);
+    };
+
+    const handleDelete = async () => {
+        if (!customerToDelete) return;
+        setIsDeleting(true);
+        try {
+            const res = await fetch(`/api/crm/customers/${customerToDelete.id}`, { method: 'DELETE' });
+            if (res.ok) {
+                setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
+                setCustomerToDelete(null);
+            }
+        } catch (err) {
+            console.error('Failed to delete customer:', err);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     return (
         <div className="p-8 max-w-7xl mx-auto flex flex-col gap-8 w-full animate-in fade-in duration-500">
@@ -243,11 +269,18 @@ export default function CustomerDirectoryPage() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
+                                            <div className="flex items-center justify-end gap-3">
                                                 {c.totalSpent > 5000 && <StarIcon className="w-4 h-4 text-yellow-400 fill-yellow-400" />}
                                                 <span className={`font-black text-base ${c.totalSpent > 5000 ? 'text-indigo-600' : 'text-gray-900'}`}>
                                                     ฿{Number(c.totalSpent || 0).toLocaleString()}
                                                 </span>
+                                                <button
+                                                    onClick={(e) => confirmDelete(c, e)}
+                                                    className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                                                    title="ลบข้อมูลลูกค้า"
+                                                >
+                                                    <TrashIcon className="w-5 h-5" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -266,6 +299,46 @@ export default function CustomerDirectoryPage() {
                     // The useEffect dependency will auto-trigger a re-fetch
                 }}
             />
+
+            {/* Delete Confirmation Modal */}
+            {customerToDelete && (
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] animate-in fade-in duration-200 p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative border border-gray-100">
+                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 mx-auto border-8 border-red-50/50">
+                            <TrashIcon className="w-7 h-7 text-red-600" />
+                        </div>
+                        <h3 className="text-2xl font-black text-gray-900 text-center mb-2">ลบข้อมูลลูกค้านี้?</h3>
+                        <p className="text-gray-500 text-center mb-8 font-medium leading-relaxed">
+                            คุณแน่ใจหรือไม่ที่จะลบโปรไฟล์ของ <br />
+                            <span className="font-bold text-gray-900 text-lg">"{customerToDelete.name}"</span><br />
+                            <span className="text-sm mt-2 block opacity-80">ประวัติการสั่งซื้อและกระแสเงินสดจะยังคงอยู่ แต่โปรไฟล์ลูกค้านี้จะถูกซ่อนออกจากระบบแบบถาวร</span>
+                        </p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setCustomerToDelete(null)}
+                                disabled={isDeleting}
+                                className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition-all disabled:opacity-50"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl shadow-md shadow-red-600/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        กำลังลบ...
+                                    </>
+                                ) : (
+                                    'ยืนยันลบทิ้ง'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
