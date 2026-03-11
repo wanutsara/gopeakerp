@@ -97,6 +97,7 @@ const navigation = [
             { name: "🏖️ อนุมัติวันลา (Leaves)", href: "/hr/leave" },
             { name: "🌙 จัดการล่วงเวลา (OT)", href: "/hr/overtime" },
             // Payroll & Finance
+            { name: "🖨️ เครื่องกำเนิดเงินเดือน (Singularity)", href: "/hr/payroll/generator" },
             { name: "💰 สรุปเงินเดือน (Payroll)", href: "/hr/payroll" },
             { name: "📉 จุดปันส่วนค่าใช้จ่าย (Allocation)", href: "/hr/payroll-allocation" },
             { name: "💸 อนุมัติเบิกจ่าย (Expenses)", href: "/hr/expenses" },
