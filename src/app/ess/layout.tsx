@@ -39,6 +39,11 @@ export default async function PortalLayout({ children }: { children: React.React
                             <span className="text-[9px] font-bold text-gray-500">Home</span>
                         </Link>
 
+                        <Link href="/ess/attendance" className="flex flex-col items-center justify-center w-16 h-12 rounded-full hover:bg-gray-100/50 transition-colors group relative">
+                            <span className="text-xl mb-0.5 group-hover:-translate-y-1 transition-transform">⏰</span>
+                            <span className="text-[9px] font-bold text-gray-500">เวลางาน</span>
+                        </Link>
+
                         <Link href="/ess/quests" className="flex flex-col items-center justify-center w-16 h-12 rounded-full hover:bg-gray-100/50 transition-colors group relative">
                             <span className="text-xl mb-0.5 group-hover:-translate-y-1 transition-transform">🎯</span>
                             <span className="text-[9px] font-bold text-gray-500">Quests</span>

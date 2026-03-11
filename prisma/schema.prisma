@@ -231,6 +231,12 @@ model TimeLog {
   payableCheckInTime  DateTime?
   payableCheckOutTime DateTime?
   isOverridden        Boolean              @default(false)
+  
+  // Phase 2: Approvals Engine & PDPA
+  isApproved          Boolean              @default(false)
+  isDisputed          Boolean              @default(false)
+  disputeReason       String?
+
   auditLogs           AttendanceAuditLog[]
 
   @@unique([employeeId, date])

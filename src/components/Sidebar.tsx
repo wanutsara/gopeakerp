@@ -92,7 +92,8 @@ const navigation = [
             { name: "📂 แผนก (Departments)", href: "/hr/departments" },
             // Time Management
             { name: "⏱️ สรุปการลงเวลา (The Pulse)", href: "/hr/attendance" },
-            { name: "🗓️ ประวัติลงเวลาย้อนหลัง (History)", href: "/hr/attendance/history" },
+            { name: "📋 ประวัติลงเวลา", href: "/hr/attendance/history" },
+            { name: "🛡️ อนุมัติเวลา (Line Manager)", href: "/hr/attendance/approvals" },
             { name: "🏖️ อนุมัติวันลา (Leaves)", href: "/hr/leave" },
             { name: "🌙 จัดการล่วงเวลา (OT)", href: "/hr/overtime" },
             // Payroll & Finance

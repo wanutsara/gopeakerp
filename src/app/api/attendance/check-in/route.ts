@@ -183,10 +183,19 @@ export async function POST(req: NextRequest) {
             const targetWorkEnd = employee.customWorkEnd ?? employee.department?.workEnd ?? companySetting.defaultWorkEnd ?? "18:00";
             const strictCutoff = companySetting.strictOutboundCutoff ?? true;
 
+            // --- Overtime Engine Integration ---
+            const approvedOT = await prisma.overtimeRequest.findFirst({
+                where: {
+                    employeeId: employee.id,
+                    date: todayUtc,
+                    status: "APPROVED"
+                }
+            });
+
             let payableCheckOutTime = new Date(now);
             if (strictCutoff) {
                 const [endHH, endMM] = targetWorkEnd.split(':').map(Number);
-                const shiftEndTarget = new Date(logicalDate);
+                let shiftEndTarget = new Date(logicalDate);
                 shiftEndTarget.setHours(endHH, endMM, 0, 0);
                 
                 const [startHH] = (employee.customWorkStart ?? employee.department?.workStart ?? companySetting.defaultWorkStart ?? "09:00").split(':').map(Number);
@@ -194,8 +203,23 @@ export async function POST(req: NextRequest) {
                     shiftEndTarget.setDate(shiftEndTarget.getDate() + 1); // Overnight shift
                 }
 
+                // Dynamically Extend Cutoff if OT exists
+                if (approvedOT) {
+                    const [otEndHH, otEndMM] = approvedOT.endTime.split(':').map(Number);
+                    const otEndTarget = new Date(logicalDate);
+                    otEndTarget.setHours(otEndHH, otEndMM, 0, 0);
+                    // Overnight OT check
+                    const [otStartHH] = approvedOT.startTime.split(':').map(Number);
+                    if (otEndHH < otStartHH || otEndHH < startHH) {
+                        otEndTarget.setDate(otEndTarget.getDate() + 1);
+                    }
+                    if (otEndTarget > shiftEndTarget) {
+                        shiftEndTarget = otEndTarget;
+                    }
+                }
+
                 if (now > shiftEndTarget) {
-                    // Prevent wage bleeding by snapping late check-outs back to 18:00
+                    // Prevent wage bleeding by snapping late check-outs back to 18:00 or extended OT End
                     payableCheckOutTime = shiftEndTarget;
                 }
             }
