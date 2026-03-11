@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
         const targetRadius = employee.customRadius ?? employee.department?.radius ?? companySetting.defaultRadius;
 
         const targetWorkStart = employee.customWorkStart ?? employee.department?.workStart ?? companySetting.defaultWorkStart;
+        const targetCutoff = employee.customLogicalCutoff ?? employee.department?.logicalCutoff ?? companySetting.defaultLogicalCutoff ?? "04:00";
 
         if (!targetLat || !targetLng) {
             return NextResponse.json({ error: "GPS Check-In location is not configured for your profile." }, { status: 400 });
@@ -87,9 +88,18 @@ export async function POST(req: NextRequest) {
             // Allow 5 minutes grace period? Let's just do strict for now, or maybe 1 minute.
             const isLate = currentHHMM > targetWorkStart;
 
-            // Need a normalized date object for the unique constraint. 
-            // We use the start of the current day in local time.
-            const todayUtc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+            // Logical Cutoff Computation: if it's currently e.g. 02:00 and cutoff is 04:00, this belongs to *yesterday*
+            const [cutoffHH, cutoffMM] = targetCutoff.split(':').map(Number);
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+
+            let logicalDate = new Date(now);
+            if (currentHour < cutoffHH || (currentHour === cutoffHH && currentMinute < cutoffMM)) {
+                logicalDate.setDate(logicalDate.getDate() - 1);
+            }
+
+            // Normalize
+            const todayUtc = new Date(Date.UTC(logicalDate.getFullYear(), logicalDate.getMonth(), logicalDate.getDate()));
 
             let logStatus = isLate ? "LATE" : "ON_TIME";
             if (isOutOfLocation && forceOutLocation) {
@@ -102,6 +112,7 @@ export async function POST(req: NextRequest) {
                         employeeId: employee.id,
                         date: todayUtc,
                         checkInTime: now,
+                        payableCheckInTime: now,
                         checkInLat: lat,
                         checkInLng: lng,
                         status: logStatus
@@ -123,8 +134,17 @@ export async function POST(req: NextRequest) {
             }
 
         } else if (action === "CHECK_OUT") {
-            // Find today's active check-in for this employee
-            const todayUtc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+            // Find the active check-in for the logical day
+            const [cutoffHH, cutoffMM] = targetCutoff.split(':').map(Number);
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+
+            let logicalDate = new Date(now);
+            if (currentHour < cutoffHH || (currentHour === cutoffHH && currentMinute < cutoffMM)) {
+                logicalDate.setDate(logicalDate.getDate() - 1);
+            }
+
+            const todayUtc = new Date(Date.UTC(logicalDate.getFullYear(), logicalDate.getMonth(), logicalDate.getDate()));
 
             const activeLog = await prisma.timeLog.findUnique({
                 where: {
@@ -147,6 +167,7 @@ export async function POST(req: NextRequest) {
                 where: { id: activeLog.id },
                 data: {
                     checkOutTime: now,
+                    payableCheckOutTime: now,
                     checkOutLat: lat,
                     checkOutLng: lng
                 }

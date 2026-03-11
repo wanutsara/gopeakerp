@@ -12,8 +12,26 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const today = new Date();
-        const yesterday = subDays(today, 1);
+        const companySetting = await prisma.companySetting.findFirst();
+        const defaultCutoff = companySetting?.defaultLogicalCutoff || "04:00";
+        const [cutoffHH, cutoffMM] = defaultCutoff.split(':').map(Number);
+        
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+
+        let logicalTodayDate = new Date(now);
+        if (currentHour < cutoffHH || (currentHour === cutoffHH && currentMinute < cutoffMM)) {
+            logicalTodayDate.setDate(logicalTodayDate.getDate() - 1);
+        }
+
+        const logicalTodayUtc = new Date(Date.UTC(logicalTodayDate.getFullYear(), logicalTodayDate.getMonth(), logicalTodayDate.getDate()));
+        const logicalYesterdayUtc = new Date(logicalTodayUtc);
+        logicalYesterdayUtc.setDate(logicalYesterdayUtc.getDate() - 1);
+        const logicalLast7DaysUtc = new Date(logicalTodayUtc);
+        logicalLast7DaysUtc.setDate(logicalLast7DaysUtc.getDate() - 6);
+        const logicalLast30DaysUtc = new Date(logicalTodayUtc);
+        logicalLast30DaysUtc.setDate(logicalLast30DaysUtc.getDate() - 30);
 
         const [
             allEmployeesCount,
@@ -25,12 +43,7 @@ export async function GET(request: Request) {
             prisma.employee.count({ where: { status: "ACTIVE" } }),
 
             prisma.timeLog.findMany({
-                where: {
-                    date: {
-                        gte: startOfDay(today),
-                        lte: endOfDay(today)
-                    }
-                },
+                where: { date: logicalTodayUtc },
                 include: {
                     employee: {
                         include: {
@@ -43,10 +56,14 @@ export async function GET(request: Request) {
             }),
 
             prisma.timeLog.findMany({
+                where: { date: logicalYesterdayUtc }
+            }),
+
+            prisma.timeLog.findMany({
                 where: {
                     date: {
-                        gte: startOfDay(yesterday),
-                        lte: endOfDay(yesterday)
+                        gte: logicalLast7DaysUtc,
+                        lte: logicalTodayUtc
                     }
                 }
             }),
@@ -54,17 +71,8 @@ export async function GET(request: Request) {
             prisma.timeLog.findMany({
                 where: {
                     date: {
-                        gte: startOfDay(subDays(today, 6)),
-                        lte: endOfDay(today)
-                    }
-                }
-            }),
-
-            prisma.timeLog.findMany({
-                where: {
-                    date: {
-                        gte: startOfDay(subDays(today, 30)),
-                        lte: endOfDay(today)
+                        gte: logicalLast30DaysUtc,
+                        lte: logicalTodayUtc
                     }
                 },
                 include: {
@@ -111,10 +119,10 @@ export async function GET(request: Request) {
             avgArrivalStr = `${h}:${m}`;
         }
 
-        // 3. Weekly Trends
         const weeklyTrends = [];
         for (let i = 6; i >= 0; i--) {
-            const targetDate = subDays(today, i);
+            const targetDate = new Date(logicalTodayDate);
+            targetDate.setDate(targetDate.getDate() - i);
             const formattedDateStr = format(targetDate, 'eee', { locale: th });
 
             const logsForDay = last7DaysLogs.filter(l => {

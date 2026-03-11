@@ -13,7 +13,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         }
 
         const body = await req.json();
-        const { name, description, lat, lng, radius, workStart, workEnd } = body;
+        const { name, description, lat, lng, radius, workStart, workEnd, logicalCutoff } = body;
 
         const department = await prisma.department.update({
             where: { id },
@@ -24,7 +24,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
                 lng: lng ? parseFloat(lng) : null,
                 radius: radius ? parseFloat(radius) : null,
                 workStart: workStart || null,
-                workEnd: workEnd || null
+                workEnd: workEnd || null,
+                logicalCutoff: logicalCutoff || null
             }
         });
 

@@ -63,6 +63,7 @@ model Department {
   radius        Float?
   workEnd       String?
   workStart     String?
+  logicalCutoff String?
   announcements Announcement[]
   employees     Employee[]
   expenses      ExpenseRequest[]
@@ -97,6 +98,7 @@ model Employee {
   customRadius            Float?
   customWorkEnd           String?
   customWorkStart         String?
+  customLogicalCutoff     String?
   phoneNumber             String?
   coins                   Int                     @default(0)
   exp                     Int                     @default(0)
@@ -194,26 +196,47 @@ model CompanySetting {
   defaultRadius     Float     @default(100)
   defaultWorkStart  String    @default("09:00")
   defaultWorkEnd    String    @default("18:00")
+  defaultLogicalCutoff String @default("04:00")
   updatedAt         DateTime  @updatedAt
   financeGoLiveDate DateTime?
 }
 
 model TimeLog {
-  id           String    @id @default(cuid())
-  employeeId   String
-  date         DateTime  @db.Date
-  checkInTime  DateTime?
-  checkInLat   Float?
-  checkInLng   Float?
-  checkOutTime DateTime?
-  checkOutLat  Float?
-  checkOutLng  Float?
-  status       String    @default("ON_TIME")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id                  String               @id @default(cuid())
+  employeeId          String
+  date                DateTime             @db.Date
+  checkInTime         DateTime?
+  checkInLat          Float?
+  checkInLng          Float?
+  checkOutTime        DateTime?
+  checkOutLat         Float?
+  checkOutLng         Float?
+  status              String               @default("ON_TIME")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  employee            Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Phase 49C: Payable Time & Audit
+  payableCheckInTime  DateTime?
+  payableCheckOutTime DateTime?
+  isOverridden        Boolean              @default(false)
+  auditLogs           AttendanceAuditLog[]
 
   @@unique([employeeId, date])
+}
+
+model AttendanceAuditLog {
+  id          String   @id @default(cuid())
+  timeLogId   String
+  changedBy   String
+  reason      String
+  oldCheckIn  DateTime?
+  newCheckIn  DateTime?
+  oldCheckOut DateTime?
+  newCheckOut DateTime?
+  createdAt   DateTime @default(now())
+
+  timeLog     TimeLog  @relation(fields: [timeLogId], references: [id], onDelete: Cascade)
 }
 
 model OvertimeRequest {

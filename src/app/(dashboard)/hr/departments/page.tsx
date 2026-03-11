@@ -21,6 +21,7 @@ export default function DepartmentsPage() {
     const [radius, setRadius] = useState("");
     const [workStart, setWorkStart] = useState("");
     const [workEnd, setWorkEnd] = useState("");
+    const [logicalCutoff, setLogicalCutoff] = useState("");
     const [isCreating, setIsCreating] = useState(false);
     const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -35,12 +36,12 @@ export default function DepartmentsPage() {
             const res = await fetch("/api/hr/departments", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, description, lat, lng, radius, workStart, workEnd }),
+                body: JSON.stringify({ name, description, lat, lng, radius, workStart, workEnd, logicalCutoff }),
             });
             if (res.ok) {
                 setName("");
                 setDescription("");
-                setLat(""); setLng(""); setRadius(""); setWorkStart(""); setWorkEnd("");
+                setLat(""); setLng(""); setRadius(""); setWorkStart(""); setWorkEnd(""); setLogicalCutoff("");
                 setShowAdvanced(false);
                 mutate();
             } else {
@@ -128,6 +129,7 @@ export default function DepartmentsPage() {
                                 <div className="grid grid-cols-2 gap-3">
                                     <div><label className="text-xs text-gray-600">เวลาเริ่มงาน</label><input type="time" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full text-sm p-2 border rounded-md" /></div>
                                     <div><label className="text-xs text-gray-600">เวลาเลิกงาน</label><input type="time" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full text-sm p-2 border rounded-md" /></div>
+                                    <div className="col-span-2"><label className="text-xs text-blue-700 font-bold">เวลาตัดกะวันใหม่ (Shift Cutoff)</label><input type="time" value={logicalCutoff} onChange={(e) => setLogicalCutoff(e.target.value)} className="w-full text-sm p-2 border rounded-md border-blue-200 bg-blue-50" /></div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="col-span-1"><label className="text-xs text-gray-600">Latitude</label><input type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} className="w-full text-sm p-2 border rounded-md" placeholder="13.756" /></div>
@@ -204,6 +206,7 @@ export default function DepartmentsPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div><label className="text-xs text-gray-600">เวลาเริ่มงาน</label><input type="time" value={editingDept.workStart || ""} onChange={(e) => setEditingDept({ ...editingDept, workStart: e.target.value })} className="w-full p-2 border rounded" /></div>
                                 <div><label className="text-xs text-gray-600">เวลาเลิกงาน</label><input type="time" value={editingDept.workEnd || ""} onChange={(e) => setEditingDept({ ...editingDept, workEnd: e.target.value })} className="w-full p-2 border rounded" /></div>
+                                <div className="col-span-2"><label className="text-xs text-blue-700 font-bold">เวลาตัดกะวันใหม่ (Shift Cutoff)</label><input type="time" value={editingDept.logicalCutoff || ""} onChange={(e) => setEditingDept({ ...editingDept, logicalCutoff: e.target.value })} className="w-full p-2 border rounded border-blue-200 bg-blue-50/50" /></div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div><label className="text-xs text-gray-600">Latitude</label><input type="number" step="any" value={editingDept.lat || ""} onChange={(e) => setEditingDept({ ...editingDept, lat: e.target.value })} className="w-full p-2 border rounded" /></div>

@@ -6,7 +6,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     try {
         const { id } = await params;
         const body = await request.json();
-        const { type, amount, category, description, date } = body;
+        const { type, amount, category, description, date, companyBrandId } = body;
 
         const updated = await prisma.transaction.update({
             where: { id },
@@ -16,6 +16,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                 amountTHB: parseFloat(amount) || 0,
                 category,
                 description,
+                companyBrandId: companyBrandId !== undefined ? companyBrandId : undefined,
                 date: date ? new Date(date) : new Date()
             }
         });

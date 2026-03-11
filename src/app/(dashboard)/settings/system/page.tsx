@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { SparklesIcon, Cog6ToothIcon, CheckCircleIcon, CurrencyDollarIcon, BanknotesIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon, Cog6ToothIcon, CheckCircleIcon, CurrencyDollarIcon, BanknotesIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 export default function SystemSettingsPage() {
     const [financeGoLiveDate, setFinanceGoLiveDate] = useState<string>('');
+    const [defaultLogicalCutoff, setDefaultLogicalCutoff] = useState<string>('04:00');
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
@@ -16,6 +17,9 @@ export default function SystemSettingsPage() {
                     const data = await res.json();
                     if (data.financeGoLiveDate) {
                         setFinanceGoLiveDate(data.financeGoLiveDate.split('T')[0]);
+                    }
+                    if (data.defaultLogicalCutoff) {
+                        setDefaultLogicalCutoff(data.defaultLogicalCutoff);
                     }
                 }
             } catch (error) {
@@ -34,7 +38,10 @@ export default function SystemSettingsPage() {
             const res = await fetch('/api/settings/system', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ financeGoLiveDate: financeGoLiveDate || null })
+                body: JSON.stringify({ 
+                    financeGoLiveDate: financeGoLiveDate || null,
+                    defaultLogicalCutoff: defaultLogicalCutoff
+                })
             });
             if (res.ok) {
                 setSaveSuccess(true);
@@ -86,6 +93,36 @@ export default function SystemSettingsPage() {
                                 <p className="text-xs text-indigo-600 font-medium mt-1 flex items-center gap-1.5">
                                     <SparklesIcon className="w-4 h-4" />
                                     Cash Flow Tracking starts purely from {new Date(financeGoLiveDate).toLocaleDateString()}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-start gap-4 pb-6 border-b border-gray-100">
+                    <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center shrink-0">
+                        <ClockIcon className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                        <h2 className="text-xl font-bold text-gray-900">Logical Day Cutoff (เวลาตัดยอดวัน)</h2>
+                        <p className="text-gray-500 text-sm mt-1 max-w-2xl leading-relaxed">
+                            Define the system-wide default hour when the business day officially rolls over into "Tomorrow". Essential for reconciling overnight shifts (e.g. 23:00 - 06:00). Standard corporate is <span className="font-bold">04:00 AM</span>.
+                        </p>
+
+                        <div className="mt-6 flex flex-col gap-2 max-w-xs">
+                            <label className="text-xs font-black text-gray-700 uppercase tracking-widest flex items-center gap-2">
+                                Company Global Shift Cutoff
+                            </label>
+                            <input
+                                type="time"
+                                value={defaultLogicalCutoff}
+                                onChange={(e) => setDefaultLogicalCutoff(e.target.value)}
+                                className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all shadow-sm cursor-pointer"
+                            />
+                            {defaultLogicalCutoff && (
+                                <p className="text-xs text-purple-600 font-medium mt-1 flex items-center gap-1.5">
+                                    <SparklesIcon className="w-4 h-4" />
+                                    The entire ERP shifts days at {defaultLogicalCutoff}
                                 </p>
                             )}
                         </div>

@@ -4,9 +4,16 @@ import { revalidatePath } from "next/cache";
 
 export async function GET(request: Request) {
     try {
+        const { searchParams } = new URL(request.url);
+        const brandId = searchParams.get('brandId');
+
+        const whereClause: any = brandId ? { companyBrandId: brandId } : {};
+
         const transactions = await prisma.transaction.findMany({
+            where: whereClause,
             orderBy: { date: 'desc' },
-            take: 50
+            take: 100,
+            include: { companyBrand: true }
         });
         return NextResponse.json(transactions);
     } catch (error) {
@@ -18,7 +25,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { type, amount, category, description, date } = body;
+        const { type, amount, category, description, date, companyBrandId } = body;
 
         const newTx = await prisma.transaction.create({
             data: {
@@ -27,6 +34,7 @@ export async function POST(request: Request) {
                 amountTHB: parseFloat(amount) || 0,
                 category,
                 description,
+                companyBrandId: companyBrandId || null,
                 date: date ? new Date(date) : new Date()
             }
         });

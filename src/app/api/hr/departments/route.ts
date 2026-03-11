@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { name, description, lat, lng, radius, workStart, workEnd } = body;
+        const { name, description, lat, lng, radius, workStart, workEnd, logicalCutoff } = body;
 
         if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
@@ -44,7 +44,8 @@ export async function POST(req: NextRequest) {
                 lng: lng ? parseFloat(lng) : null,
                 radius: radius ? parseFloat(radius) : null,
                 workStart: workStart || null,
-                workEnd: workEnd || null
+                workEnd: workEnd || null,
+                logicalCutoff: logicalCutoff || null
             }
         });
 

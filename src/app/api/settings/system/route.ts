@@ -21,6 +21,7 @@ export async function GET(request: Request) {
                     defaultRadius: 100,
                     defaultWorkStart: '09:00',
                     defaultWorkEnd: '18:00',
+                    defaultLogicalCutoff: '04:00',
                     financeGoLiveDate: null,
                 }
             });
@@ -41,7 +42,7 @@ export async function PUT(request: Request) {
         }
 
         const body = await request.json();
-        const { financeGoLiveDate } = body;
+        const { financeGoLiveDate, defaultLogicalCutoff } = body;
 
         let setting = await prisma.companySetting.findFirst();
 
@@ -50,12 +51,14 @@ export async function PUT(request: Request) {
                 where: { id: setting.id },
                 data: {
                     financeGoLiveDate: financeGoLiveDate ? new Date(financeGoLiveDate) : null,
+                    defaultLogicalCutoff: defaultLogicalCutoff || '04:00',
                 }
             });
         } else {
             setting = await prisma.companySetting.create({
                 data: {
                     financeGoLiveDate: financeGoLiveDate ? new Date(financeGoLiveDate) : null,
+                    defaultLogicalCutoff: defaultLogicalCutoff || '04:00',
                 }
             });
         }
