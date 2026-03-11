@@ -115,6 +115,7 @@ const navigation = [
             { name: "ข้อมูลนิติบุคคล (Brands)", href: "/settings/brands" },
             { name: "ตั้งค่าระบบ (System Core)", href: "/settings/system" },
             { name: "ตั้งค่า HR (HR Settings)", href: "/hr/settings" },
+            { name: "ปฏิทินวันหยุด (Holidays)", href: "/hr/settings/holidays" },
         ]
     }
 ];

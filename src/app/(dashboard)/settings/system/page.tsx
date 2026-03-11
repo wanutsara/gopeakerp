@@ -5,6 +5,8 @@ import { SparklesIcon, Cog6ToothIcon, CheckCircleIcon, CurrencyDollarIcon, Bankn
 export default function SystemSettingsPage() {
     const [financeGoLiveDate, setFinanceGoLiveDate] = useState<string>('');
     const [defaultLogicalCutoff, setDefaultLogicalCutoff] = useState<string>('04:00');
+    const [gracePeriodMinutes, setGracePeriodMinutes] = useState<number>(15);
+    const [strictOutboundCutoff, setStrictOutboundCutoff] = useState<boolean>(true);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
@@ -20,6 +22,12 @@ export default function SystemSettingsPage() {
                     }
                     if (data.defaultLogicalCutoff) {
                         setDefaultLogicalCutoff(data.defaultLogicalCutoff);
+                    }
+                    if (data.gracePeriodMinutes !== undefined) {
+                        setGracePeriodMinutes(data.gracePeriodMinutes);
+                    }
+                    if (data.strictOutboundCutoff !== undefined) {
+                        setStrictOutboundCutoff(data.strictOutboundCutoff);
                     }
                 }
             } catch (error) {
@@ -40,7 +48,9 @@ export default function SystemSettingsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     financeGoLiveDate: financeGoLiveDate || null,
-                    defaultLogicalCutoff: defaultLogicalCutoff
+                    defaultLogicalCutoff: defaultLogicalCutoff,
+                    gracePeriodMinutes: gracePeriodMinutes,
+                    strictOutboundCutoff: strictOutboundCutoff
                 })
             });
             if (res.ok) {
@@ -125,6 +135,46 @@ export default function SystemSettingsPage() {
                                     The entire ERP shifts days at {defaultLogicalCutoff}
                                 </p>
                             )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-start gap-4 pb-6 border-b border-gray-100">
+                    <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center shrink-0">
+                        <ClockIcon className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                        <h2 className="text-xl font-bold text-gray-900">Auto-Rounding & Grace Period AI</h2>
+                        <p className="text-gray-500 text-sm mt-1 max-w-2xl leading-relaxed">
+                            Configure how the Check-In Engine calculates <span className="font-bold underline">Payable Time</span>. The Grace Period forgives minor lateness, while the Strict Cutoff prevents unaccounted Overtime bleeding by snapping late check-outs back to the exact shift end (e.g. 18:00).
+                        </p>
+
+                        <div className="mt-6 flex flex-col sm:flex-row gap-6">
+                            <div className="flex flex-col gap-2 max-w-xs flex-1">
+                                <label className="text-xs font-black text-gray-700 uppercase tracking-widest flex items-center gap-2">
+                                    Grace Period (Minutes)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="60"
+                                    value={gracePeriodMinutes}
+                                    onChange={(e) => setGracePeriodMinutes(Number(e.target.value))}
+                                    className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all shadow-sm"
+                                />
+                                <p className="text-xs text-rose-600 font-medium mt-1">Arrivals within {gracePeriodMinutes} mins are snapped to exact shift start.</p>
+                            </div>
+                            <div className="flex flex-col gap-2 max-w-xs flex-1 justify-center pt-6">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={strictOutboundCutoff}
+                                        onChange={(e) => setStrictOutboundCutoff(e.target.checked)}
+                                        className="w-5 h-5 rounded border-gray-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                                    />
+                                    <span className="text-sm font-bold text-gray-900">Enable Strict Check-Out Cutoff</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>

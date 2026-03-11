@@ -22,6 +22,8 @@ export async function GET(request: Request) {
                     defaultWorkStart: '09:00',
                     defaultWorkEnd: '18:00',
                     defaultLogicalCutoff: '04:00',
+                    gracePeriodMinutes: 15,
+                    strictOutboundCutoff: true,
                     financeGoLiveDate: null,
                 }
             });
@@ -42,7 +44,7 @@ export async function PUT(request: Request) {
         }
 
         const body = await request.json();
-        const { financeGoLiveDate, defaultLogicalCutoff } = body;
+        const { financeGoLiveDate, defaultLogicalCutoff, gracePeriodMinutes, strictOutboundCutoff } = body;
 
         let setting = await prisma.companySetting.findFirst();
 

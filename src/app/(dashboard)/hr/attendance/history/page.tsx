@@ -131,6 +131,8 @@ export default function HistoricalTimesheetsPage() {
             case 'ON_TIME': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
             case 'LATE': return 'bg-amber-100 text-amber-800 border-amber-200';
             case 'ABSENT': case 'NO_SHOW': return 'bg-rose-100 text-rose-800 border-rose-200';
+            case 'HOLIDAY': return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'ON_LEAVE': return 'bg-purple-100 text-purple-700 border-purple-200';
             default: return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     };
@@ -228,9 +230,14 @@ export default function HistoricalTimesheetsPage() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-2.5 py-1 text-xs font-bold rounded-md border ${getStatusStyle(log.status)} flex items-center w-fit gap-1.5`}>
-                                                    {isMissing && <ExclamationTriangleIcon className="w-3.5 h-3.5" />}
+                                                    {isMissing && log.status === 'NO_SHOW' && <ExclamationTriangleIcon className="w-3.5 h-3.5" />}
                                                     {log.status.replace('_', ' ')}
                                                 </span>
+                                                {log.ghostReason && (
+                                                    <div className="text-[10px] text-gray-500 mt-1.5 font-bold tracking-tight bg-gray-50 border border-gray-100 px-2 py-0.5 rounded w-fit">
+                                                        {log.ghostReason}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-center gap-2 text-gray-500 text-xs font-mono bg-gray-50 px-3 py-1.5 rounded-lg w-fit mx-auto border border-gray-100">

@@ -81,14 +81,7 @@ export async function POST(req: NextRequest) {
         const now = new Date();
 
         if (action === "CHECK_IN") {
-            // Determine "LATE" or "ON_TIME"
-            // The time string looks like "09:00". We compare it to HH:mm currently.
-            const currentHHMM = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Bangkok' });
-
-            // Allow 5 minutes grace period? Let's just do strict for now, or maybe 1 minute.
-            const isLate = currentHHMM > targetWorkStart;
-
-            // Logical Cutoff Computation: if it's currently e.g. 02:00 and cutoff is 04:00, this belongs to *yesterday*
+            // Logical Cutoff Computation FIRST
             const [cutoffHH, cutoffMM] = targetCutoff.split(':').map(Number);
             const currentHour = now.getHours();
             const currentMinute = now.getMinutes();
@@ -96,6 +89,30 @@ export async function POST(req: NextRequest) {
             let logicalDate = new Date(now);
             if (currentHour < cutoffHH || (currentHour === cutoffHH && currentMinute < cutoffMM)) {
                 logicalDate.setDate(logicalDate.getDate() - 1);
+            }
+
+            // --- Auto-Rounding AI for Check-In ---
+            const [startHH, startMM] = targetWorkStart.split(':').map(Number);
+            const shiftStartTarget = new Date(logicalDate);
+            shiftStartTarget.setHours(startHH, startMM, 0, 0);
+
+            const graceLimit = new Date(shiftStartTarget);
+            graceLimit.setMinutes(graceLimit.getMinutes() + (companySetting.gracePeriodMinutes ?? 15));
+
+            let payableCheckInTime = now;
+            let isLate = false;
+
+            if (now <= graceLimit) {
+                // Forgive minor lateness and snap down to shift start (e.g. 09:00)
+                if (now < shiftStartTarget) {
+                     payableCheckInTime = shiftStartTarget; // If arrive 08:30, snap up to 09:00? The user wants strict tracking but usually we snap forward. 
+                     // Wait, user said "prevent wage bleeding". If arrive early, snap to 09:00.
+                     payableCheckInTime = shiftStartTarget;
+                } else {
+                     payableCheckInTime = shiftStartTarget; // 09:14 snaps down to 09:00.
+                }
+            } else {
+                isLate = true; // 09:16 is punished to exactly 09:16
             }
 
             // Normalize
@@ -112,7 +129,7 @@ export async function POST(req: NextRequest) {
                         employeeId: employee.id,
                         date: todayUtc,
                         checkInTime: now,
-                        payableCheckInTime: now,
+                        payableCheckInTime: payableCheckInTime,
                         checkInLat: lat,
                         checkInLng: lng,
                         status: logStatus
@@ -163,11 +180,31 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: "คุณได้เช็คเอาท์ไปแล้วของวันนี้" }, { status: 400 });
             }
 
+            const targetWorkEnd = employee.customWorkEnd ?? employee.department?.workEnd ?? companySetting.defaultWorkEnd ?? "18:00";
+            const strictCutoff = companySetting.strictOutboundCutoff ?? true;
+
+            let payableCheckOutTime = new Date(now);
+            if (strictCutoff) {
+                const [endHH, endMM] = targetWorkEnd.split(':').map(Number);
+                const shiftEndTarget = new Date(logicalDate);
+                shiftEndTarget.setHours(endHH, endMM, 0, 0);
+                
+                const [startHH] = (employee.customWorkStart ?? employee.department?.workStart ?? companySetting.defaultWorkStart ?? "09:00").split(':').map(Number);
+                if (endHH < startHH) {
+                    shiftEndTarget.setDate(shiftEndTarget.getDate() + 1); // Overnight shift
+                }
+
+                if (now > shiftEndTarget) {
+                    // Prevent wage bleeding by snapping late check-outs back to 18:00
+                    payableCheckOutTime = shiftEndTarget;
+                }
+            }
+
             const updatedLog = await prisma.timeLog.update({
                 where: { id: activeLog.id },
                 data: {
                     checkOutTime: now,
-                    payableCheckOutTime: now,
+                    payableCheckOutTime: payableCheckOutTime,
                     checkOutLat: lat,
                     checkOutLng: lng
                 }

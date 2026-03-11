@@ -197,8 +197,19 @@ model CompanySetting {
   defaultWorkStart  String    @default("09:00")
   defaultWorkEnd    String    @default("18:00")
   defaultLogicalCutoff String @default("04:00")
+  gracePeriodMinutes Int      @default(15)
+  strictOutboundCutoff Boolean @default(true)
   updatedAt         DateTime  @updatedAt
   financeGoLiveDate DateTime?
+}
+
+model CompanyHoliday {
+  id              String   @id @default(cuid())
+  date            DateTime @db.Date
+  name            String
+  isPaid          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model TimeLog {
