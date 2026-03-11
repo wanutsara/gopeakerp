@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
         });
 
         // Generate the Timesheets Matrix (including Missing/Ghost shifts)
-        const timesheetMatrix = [];
+        const timesheetMatrix: any[] = [];
         
         // Loop through each day
         let currentDate = new Date(startDate);
@@ -61,7 +61,6 @@ export async function GET(req: NextRequest) {
 
             // For each employee on this day
             employees.forEach(emp => {
-                const log = logMap.set(`${emp.id}_${dateStr}`);
                 const logExists = logMap.has(`${emp.id}_${dateStr}`);
                 
                 if (logExists) {

@@ -206,7 +206,7 @@ export default function HistoricalTimesheetsPage() {
                             ) : filteredTimesheets.length === 0 ? (
                                 <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500 font-medium">No records found for this period.</td></tr>
                             ) : (
-                                filteredTimesheets.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime() || (a.employee?.user?.name || "").localeCompare(b.employee?.user?.name || "")).map((log: any) => {
+                                filteredTimesheets.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime() || (a.employee?.user?.name || "").localeCompare(b.employee?.user?.name || "")).map((log: any) => {
                                     
                                     const formatTime = (isoField: string) => {
                                         if (!isoField) return "--:--";
