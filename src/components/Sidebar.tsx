@@ -80,32 +80,49 @@ const navigation = [
         ]
     },
     {
-        name: "งานบุคคล (HR)",
+        name: "HR: ข้อมูลกลาง (Core)",
         icon: "👥",
         module: "HR",
         children: [
-            // Core
             { name: "👑 แดชบอร์ด 10X (Analytics)", href: "/hr/dashboard" },
             { name: "👤 รายชื่อพนักงาน (Employees)", href: "/hr" },
             { name: "🏢 โครงสร้างบริษัท (Org Chart)", href: "/hr/org-chart" },
             { name: "🌐 ออฟฟิศ 3 มิติ (Virtual Office)", href: "/hr/virtual-office" },
             { name: "📂 แผนก (Departments)", href: "/hr/departments" },
-            // Time Management
-            { name: "⏱️ สรุปการลงเวลา (The Pulse)", href: "/hr/attendance" },
+        ]
+    },
+    {
+        name: "HR: จัดการเวลา (Time & Attendance)",
+        icon: "⏱️",
+        module: "HR",
+        children: [
+            { name: "📊 สรุปการลงเวลา (The Pulse)", href: "/hr/attendance" },
             { name: "📋 ประวัติลงเวลา", href: "/hr/attendance/history" },
             { name: "🛡️ อนุมัติเวลา (Line Manager)", href: "/hr/attendance/approvals" },
             { name: "🏖️ อนุมัติวันลา (Leaves)", href: "/hr/leave" },
             { name: "🌙 จัดการล่วงเวลา (OT)", href: "/hr/overtime" },
-            // Payroll & Finance
+        ]
+    },
+    {
+        name: "HR: เงินเดือน (Payroll & Setup)",
+        icon: "💰",
+        module: "HR",
+        children: [
             { name: "🖨️ เครื่องกำเนิดเงินเดือน (Singularity)", href: "/hr/payroll/generator" },
-            { name: "💰 สลิปเงินเดือน (Payroll)", href: "/hr/payroll" },
+            { name: "🧾 สลิปเงินเดือน (Payroll)", href: "/hr/payroll" },
             { name: "📉 จุดปันส่วนค่าใช้จ่าย (Allocation)", href: "/hr/payroll-allocation" },
             { name: "💸 อนุมัติเบิกจ่าย (Expenses)", href: "/hr/expenses" },
-            // Performance & Engagement
+        ]
+    },
+    {
+        name: "HR: พัฒนาองค์กร (Talent)",
+        icon: "🎯",
+        module: "HR",
+        children: [
             { name: "🎯 เป้าหมาย OKR (Goals)", href: "/hr/goals" },
             { name: "🌳 ผังทิศทางบริษัท (Alignment)", href: "/hr/alignment" },
             { name: "⚔️ แจกจ่ายภารกิจ (Quest Master)", href: "/hr/quests" },
-            { name: "📢 ประกาศบอร์ดข่าว (News)", href: "/hr/announcements" }
+            { name: "📢 ประกาศข่าวสาร (News)", href: "/hr/announcements" }
         ]
     },
     {
@@ -130,8 +147,6 @@ export default function Sidebar() {
         const initial: Record<string, boolean> = {};
         for (const item of navigation) {
             if (item.children && item.children.some(child => pathname.startsWith(child.href) && child.href !== "/hr" || (child.href === "/hr" && (pathname === "/hr" || pathname.startsWith("/hr/create") || pathname.match(/^\/hr\/(?!attendance|departments|payroll|leave|settings)[a-zA-Z0-9_-]+$/))))) {
-                initial[item.name] = true;
-            } else if (item.children && item.name === "ระบบบุคคล (HR)" && pathname.startsWith('/hr') && !pathname.startsWith('/hr/settings')) {
                 initial[item.name] = true;
             } else if (item.children && item.name === "ระบบพนักงาน (ESS)" && pathname.startsWith('/ess')) {
                 initial[item.name] = true;
