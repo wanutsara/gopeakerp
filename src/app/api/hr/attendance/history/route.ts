@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
         // Fetch all active employees
         const employees = await prisma.employee.findMany({
             where: { status: "ACTIVE" },
-            include: { department: true }
+            include: { department: true, user: true }
         });
 
         // Fetch all TimeLogs in date range
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
                 }
             },
             include: {
-                employee: { include: { department: true } },
+                employee: { include: { department: true, user: true } },
                 auditLogs: {
                     orderBy: { createdAt: 'desc' }
                 }
