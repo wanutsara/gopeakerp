@@ -157,7 +157,7 @@ function OmniImportContent() {
                     </h1>
                     <p className="mt-2 text-gray-500">
                         Drop raw Sales Exports from Page365, Shipnity, Shopee, or TikTok. <br />
-                        Google Gemini 3.1 Pro will autonomously extract orders in the background, build Customer Profiles, and deduct inventory.
+                        Google Gemini 1.5 Pro will autonomously extract orders in the background, build Customer Profiles, and deduct inventory.
                     </p>
                 </div>
             </div>
@@ -214,7 +214,7 @@ function OmniImportContent() {
                     </div>
                     <h3 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">AI Worker Processing...</h3>
                     <p className="text-fuchsia-800 font-medium text-lg max-w-lg mb-6 leading-relaxed">
-                        Your massive dataset has been queued. Gemini 3.1 Pro is dynamically extracting CRM entities and identifying logistics SKUs in a detached background thread.
+                        Your massive dataset has been queued. Gemini 1.5 Pro is dynamically extracting CRM entities and identifying logistics SKUs in a detached background thread.
                         <br /><br />
                         <span className="bg-fuchsia-100/50 px-3 py-1 rounded text-fuchsia-900 font-bold border border-fuchsia-200">You can safely close this page or navigate elsewhere.</span>
                         <br />A Global Notification will alert you when your structured data is securely cached and ready for review.

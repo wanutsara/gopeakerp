@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
         // --- STEP 1: The AI Extractor (Upgraded with CDP Customer Extraction) ---
         if (action === 'ANALYZE') {
-            const model = genAI.getGenerativeModel({ model: 'gemini-3.1-pro-preview' });
+            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
             const prompt = `
 You are an advanced E-commerce Data Parser AI.

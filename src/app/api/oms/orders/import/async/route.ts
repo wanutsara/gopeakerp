@@ -24,7 +24,7 @@ async function processJobAsync(jobId: string, rawData: string, userId: string) {
         });
 
         // 2. Call Gemini
-        const model = genAI.getGenerativeModel({ model: 'gemini-3.1-pro-preview' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
         const prompt = `
 You are an advanced E-commerce Data Parser AI.
 You will receive raw text from a CSV/Excel export containing sales data from platforms like Shopee, Lazada, TikTok, Line, or Page365.
