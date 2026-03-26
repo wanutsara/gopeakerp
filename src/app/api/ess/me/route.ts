@@ -23,9 +23,22 @@ export async function GET() {
             return NextResponse.json({ error: "Employee profile not found" }, { status: 404 });
         }
 
-        // Get today's attendance log
+        // 2. Get Company Global Settings for Logical Cutoff
+        const companySetting = await prisma.companySetting.findFirst();
+        const targetCutoff = employee.customLogicalCutoff ?? employee.department?.logicalCutoff ?? companySetting?.defaultLogicalCutoff ?? "04:00";
+
+        // Get today's attendance log based on Logical Day
         const now = new Date();
-        const todayUtc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+        const [cutoffHH, cutoffMM] = targetCutoff.split(':').map(Number);
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+
+        let logicalDate = new Date(now);
+        if (currentHour < cutoffHH || (currentHour === cutoffHH && currentMinute < cutoffMM)) {
+            logicalDate.setDate(logicalDate.getDate() - 1);
+        }
+
+        const todayUtc = new Date(Date.UTC(logicalDate.getFullYear(), logicalDate.getMonth(), logicalDate.getDate()));
 
         const todayLog = await prisma.timeLog.findUnique({
             where: {
