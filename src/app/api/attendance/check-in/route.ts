@@ -81,20 +81,25 @@ export async function POST(req: NextRequest) {
         const now = new Date();
 
         if (action === "CHECK_IN") {
-            // Logical Cutoff Computation FIRST
+            // Logical Cutoff Computation FIRST (Timezone aware: Asia/Bangkok UTC+7)
             const [cutoffHH, cutoffMM] = targetCutoff.split(':').map(Number);
-            const currentHour = now.getHours();
-            const currentMinute = now.getMinutes();
+            const thaiNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+            const currentHour = thaiNow.getUTCHours();
+            const currentMinute = thaiNow.getUTCMinutes();
 
-            let logicalDate = new Date(now);
+            let logicalDate = new Date(thaiNow);
             if (currentHour < cutoffHH || (currentHour === cutoffHH && currentMinute < cutoffMM)) {
-                logicalDate.setDate(logicalDate.getDate() - 1);
+                logicalDate.setUTCDate(logicalDate.getUTCDate() - 1);
             }
 
             // --- Auto-Rounding AI for Check-In ---
             const [startHH, startMM] = targetWorkStart.split(':').map(Number);
-            const shiftStartTarget = new Date(logicalDate);
-            shiftStartTarget.setHours(startHH, startMM, 0, 0);
+            const shiftStartTarget = new Date(Date.UTC(
+                logicalDate.getUTCFullYear(), 
+                logicalDate.getUTCMonth(), 
+                logicalDate.getUTCDate(), 
+                startHH - 7, startMM, 0, 0
+            ));
 
             const graceLimit = new Date(shiftStartTarget);
             graceLimit.setMinutes(graceLimit.getMinutes() + (companySetting.gracePeriodMinutes ?? 15));
@@ -105,18 +110,16 @@ export async function POST(req: NextRequest) {
             if (now <= graceLimit) {
                 // Forgive minor lateness and snap down to shift start (e.g. 09:00)
                 if (now < shiftStartTarget) {
-                     payableCheckInTime = shiftStartTarget; // If arrive 08:30, snap up to 09:00? The user wants strict tracking but usually we snap forward. 
-                     // Wait, user said "prevent wage bleeding". If arrive early, snap to 09:00.
-                     payableCheckInTime = shiftStartTarget;
+                     payableCheckInTime = shiftStartTarget; // If arrive 08:30, snap up to 09:00
                 } else {
-                     payableCheckInTime = shiftStartTarget; // 09:14 snaps down to 09:00.
+                     payableCheckInTime = shiftStartTarget; // 09:14 snaps down to 09:00
                 }
             } else {
                 isLate = true; // 09:16 is punished to exactly 09:16
             }
 
-            // Normalize
-            const todayUtc = new Date(Date.UTC(logicalDate.getFullYear(), logicalDate.getMonth(), logicalDate.getDate()));
+            // Normalize key for DB (always UTC midnight)
+            const todayUtc = new Date(Date.UTC(logicalDate.getUTCFullYear(), logicalDate.getUTCMonth(), logicalDate.getUTCDate()));
 
             let logStatus = isLate ? "LATE" : "ON_TIME";
             if (isOutOfLocation && forceOutLocation) {
@@ -151,17 +154,18 @@ export async function POST(req: NextRequest) {
             }
 
         } else if (action === "CHECK_OUT") {
-            // Find the active check-in for the logical day
+            // Find the active check-in for the logical day (Timezone aware)
             const [cutoffHH, cutoffMM] = targetCutoff.split(':').map(Number);
-            const currentHour = now.getHours();
-            const currentMinute = now.getMinutes();
+            const thaiNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+            const currentHour = thaiNow.getUTCHours();
+            const currentMinute = thaiNow.getUTCMinutes();
 
-            let logicalDate = new Date(now);
+            let logicalDate = new Date(thaiNow);
             if (currentHour < cutoffHH || (currentHour === cutoffHH && currentMinute < cutoffMM)) {
-                logicalDate.setDate(logicalDate.getDate() - 1);
+                logicalDate.setUTCDate(logicalDate.getUTCDate() - 1);
             }
 
-            const todayUtc = new Date(Date.UTC(logicalDate.getFullYear(), logicalDate.getMonth(), logicalDate.getDate()));
+            const todayUtc = new Date(Date.UTC(logicalDate.getUTCFullYear(), logicalDate.getUTCMonth(), logicalDate.getUTCDate()));
 
             const activeLog = await prisma.timeLog.findUnique({
                 where: {
@@ -195,23 +199,31 @@ export async function POST(req: NextRequest) {
             let payableCheckOutTime = new Date(now);
             if (strictCutoff) {
                 const [endHH, endMM] = targetWorkEnd.split(':').map(Number);
-                let shiftEndTarget = new Date(logicalDate);
-                shiftEndTarget.setHours(endHH, endMM, 0, 0);
+                let shiftEndTarget = new Date(Date.UTC(
+                    logicalDate.getUTCFullYear(),
+                    logicalDate.getUTCMonth(),
+                    logicalDate.getUTCDate(),
+                    endHH - 7, endMM, 0, 0
+                ));
                 
                 const [startHH] = (employee.customWorkStart ?? employee.department?.workStart ?? companySetting.defaultWorkStart ?? "09:00").split(':').map(Number);
                 if (endHH < startHH) {
-                    shiftEndTarget.setDate(shiftEndTarget.getDate() + 1); // Overnight shift
+                    shiftEndTarget.setUTCDate(shiftEndTarget.getUTCDate() + 1); // Overnight shift
                 }
 
                 // Dynamically Extend Cutoff if OT exists
                 if (approvedOT) {
                     const [otEndHH, otEndMM] = approvedOT.endTime.split(':').map(Number);
-                    const otEndTarget = new Date(logicalDate);
-                    otEndTarget.setHours(otEndHH, otEndMM, 0, 0);
+                    const otEndTarget = new Date(Date.UTC(
+                        logicalDate.getUTCFullYear(),
+                        logicalDate.getUTCMonth(),
+                        logicalDate.getUTCDate(),
+                        otEndHH - 7, otEndMM, 0, 0
+                    ));
                     // Overnight OT check
                     const [otStartHH] = approvedOT.startTime.split(':').map(Number);
                     if (otEndHH < otStartHH || otEndHH < startHH) {
-                        otEndTarget.setDate(otEndTarget.getDate() + 1);
+                        otEndTarget.setUTCDate(otEndTarget.getUTCDate() + 1);
                     }
                     if (otEndTarget > shiftEndTarget) {
                         shiftEndTarget = otEndTarget;
@@ -219,7 +231,7 @@ export async function POST(req: NextRequest) {
                 }
 
                 if (now > shiftEndTarget) {
-                    // Prevent wage bleeding by snapping late check-outs back to 18:00 or extended OT End
+                    // Prevent wage bleeding by snapping late check-outs back
                     payableCheckOutTime = shiftEndTarget;
                 }
             }

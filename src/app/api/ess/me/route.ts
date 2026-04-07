@@ -27,18 +27,19 @@ export async function GET() {
         const companySetting = await prisma.companySetting.findFirst();
         const targetCutoff = employee.customLogicalCutoff ?? employee.department?.logicalCutoff ?? companySetting?.defaultLogicalCutoff ?? "04:00";
 
-        // Get today's attendance log based on Logical Day
+        // Get today's attendance log based on Logical Day (Timezone aware)
         const now = new Date();
         const [cutoffHH, cutoffMM] = targetCutoff.split(':').map(Number);
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
+        const thaiNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+        const currentHour = thaiNow.getUTCHours();
+        const currentMinute = thaiNow.getUTCMinutes();
 
-        let logicalDate = new Date(now);
+        let logicalDate = new Date(thaiNow);
         if (currentHour < cutoffHH || (currentHour === cutoffHH && currentMinute < cutoffMM)) {
-            logicalDate.setDate(logicalDate.getDate() - 1);
+            logicalDate.setUTCDate(logicalDate.getUTCDate() - 1);
         }
 
-        const todayUtc = new Date(Date.UTC(logicalDate.getFullYear(), logicalDate.getMonth(), logicalDate.getDate()));
+        const todayUtc = new Date(Date.UTC(logicalDate.getUTCFullYear(), logicalDate.getUTCMonth(), logicalDate.getUTCDate()));
 
         const todayLog = await prisma.timeLog.findUnique({
             where: {

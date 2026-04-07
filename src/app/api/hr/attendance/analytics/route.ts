@@ -17,21 +17,22 @@ export async function GET(request: Request) {
         const [cutoffHH, cutoffMM] = defaultCutoff.split(':').map(Number);
         
         const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
+        const thaiNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+        const currentHour = thaiNow.getUTCHours();
+        const currentMinute = thaiNow.getUTCMinutes();
 
-        let logicalTodayDate = new Date(now);
+        let logicalTodayDate = new Date(thaiNow);
         if (currentHour < cutoffHH || (currentHour === cutoffHH && currentMinute < cutoffMM)) {
-            logicalTodayDate.setDate(logicalTodayDate.getDate() - 1);
+            logicalTodayDate.setUTCDate(logicalTodayDate.getUTCDate() - 1);
         }
 
-        const logicalTodayUtc = new Date(Date.UTC(logicalTodayDate.getFullYear(), logicalTodayDate.getMonth(), logicalTodayDate.getDate()));
+        const logicalTodayUtc = new Date(Date.UTC(logicalTodayDate.getUTCFullYear(), logicalTodayDate.getUTCMonth(), logicalTodayDate.getUTCDate()));
         const logicalYesterdayUtc = new Date(logicalTodayUtc);
-        logicalYesterdayUtc.setDate(logicalYesterdayUtc.getDate() - 1);
+        logicalYesterdayUtc.setUTCDate(logicalYesterdayUtc.getUTCDate() - 1);
         const logicalLast7DaysUtc = new Date(logicalTodayUtc);
-        logicalLast7DaysUtc.setDate(logicalLast7DaysUtc.getDate() - 6);
+        logicalLast7DaysUtc.setUTCDate(logicalLast7DaysUtc.getUTCDate() - 6);
         const logicalLast30DaysUtc = new Date(logicalTodayUtc);
-        logicalLast30DaysUtc.setDate(logicalLast30DaysUtc.getDate() - 30);
+        logicalLast30DaysUtc.setUTCDate(logicalLast30DaysUtc.getUTCDate() - 30);
 
         const [
             allEmployeesCount,
@@ -105,8 +106,8 @@ export async function GET(request: Request) {
         let countForAvg = 0;
         monthlyLogs.forEach(log => {
             if (log.checkInTime) {
-                const dateObj = new Date(log.checkInTime);
-                totalMinutes += (dateObj.getHours() * 60) + dateObj.getMinutes();
+                const dateObj = new Date(log.checkInTime.getTime() + 7 * 60 * 60 * 1000);
+                totalMinutes += (dateObj.getUTCHours() * 60) + dateObj.getUTCMinutes();
                 countForAvg++;
             }
         });
