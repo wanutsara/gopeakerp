@@ -84,6 +84,20 @@ export async function POST(req: NextRequest) {
             targetEmployeeId = employee.id;
         }
 
+        // Component 3 Guard: Cannot request leave if there is approved OT on that day
+        const targetDate = new Date(startDate);
+        const existingOT = await prisma.overtimeRequest.findFirst({
+            where: {
+                employeeId: targetEmployeeId,
+                status: "APPROVED",
+                date: targetDate
+            }
+        });
+
+        if (existingOT) {
+            return NextResponse.json({ error: "Cannot request leave on a day with an approved Overtime request." }, { status: 400 });
+        }
+
         const leaveStatus = ((session.user.role === "OWNER" || session.user.role === "MANAGER") && status) ? status : "PENDING";
 
         const leaveRequest = await prisma.leaveRequest.create({

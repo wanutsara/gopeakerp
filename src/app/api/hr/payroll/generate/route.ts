@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkPermission } from "@/lib/rbac";
 
 // Helper to determine start and end dates for a "YYYY-MM"
 function getMonthBounds(monthStr: string) {
@@ -14,7 +15,8 @@ function getMonthBounds(monthStr: string) {
 export async function GET(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || !session.user || (session.user.role !== "OWNER" && session.user.role !== "HR")) {
+        const hasPermission = await checkPermission(session?.user?.id, "PAYROLL", "canRead");
+        if (!hasPermission) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -128,7 +130,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || !session.user || (session.user.role !== "OWNER" && session.user.role !== "HR")) {
+        const hasPermission = await checkPermission(session?.user?.id, "PAYROLL", "canWrite");
+        if (!hasPermission) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -169,11 +172,16 @@ export async function POST(req: NextRequest) {
                 where: { employeeId: emp.id, date: { gte: startDate, lte: endDate }, status: "APPROVED" }
             });
             
-            let otAmount = 0;
-            ots.forEach(ot => { otAmount += ot.calculatedHours * ot.multiplier * hourlyWage; });
+            let otAmountRaw = 0;
+            ots.forEach(ot => { otAmountRaw += ot.calculatedHours * ot.multiplier * hourlyWage; });
 
-            const ssoDeduction = Math.min(baseSalary * 0.05, 875);
-            const netSalary = baseSalary + otAmount - lateDeduction - ssoDeduction;
+            const ssoDeductionRaw = Math.min(baseSalary * 0.05, 875);
+            const netSalaryRaw = baseSalary + otAmountRaw - lateDeduction - ssoDeductionRaw;
+
+            // Float Math Component 4 Fixes
+            const otAmount = Number(otAmountRaw.toFixed(2));
+            const ssoDeduction = Number(ssoDeductionRaw.toFixed(2));
+            const netSalary = Number(netSalaryRaw.toFixed(2));
 
             // Database Upsert to Payroll model
             await prisma.payroll.upsert({

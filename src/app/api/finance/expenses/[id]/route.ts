@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { checkPermission } from "@/lib/rbac";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -12,9 +13,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const isAdmin = session.user.role === "OWNER" || session.user.role === "MANAGER";
-        if (!isAdmin) {
-            return NextResponse.json({ error: "Only Managers or Owners can approve and pay expenses." }, { status: 403 });
+        const hasPermission = await checkPermission(session.user.id, "EXPENSES", "canWrite");
+        if (!hasPermission) {
+            return NextResponse.json({ error: "Only authorized personnel can approve and pay expenses." }, { status: 403 });
         }
 
         // We need the logged in user's Employee ID (for approver tracking)
@@ -114,10 +115,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
         if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-        const isAdmin = session.user.role === "OWNER" || session.user.role === "MANAGER";
+        const hasAdminPermission = await checkPermission(session.user.id, "EXPENSES", "canDelete");
         const isOwner = existing.requestor.userId === session.user.id;
 
-        if (!isAdmin && !isOwner) {
+        if (!hasAdminPermission && !isOwner) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

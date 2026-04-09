@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { checkPermission } from "@/lib/rbac";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -29,6 +32,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const session = await getServerSession(authOptions);
+        const hasPermission = await checkPermission(session?.user?.id, "EMPLOYEES", "canWrite");
+        if (!hasPermission) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
         const { id } = await params;
         const body = await request.json();
         const {
@@ -118,6 +125,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const session = await getServerSession(authOptions);
+        const hasPermission = await checkPermission(session?.user?.id, "EMPLOYEES", "canDelete");
+        if (!hasPermission) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
         const { id } = await params;
         // Need to find user id first
         const emp = await prisma.employee.findUnique({

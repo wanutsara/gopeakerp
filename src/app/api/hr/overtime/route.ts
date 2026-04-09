@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkPermission } from "@/lib/rbac";
 
 export async function GET(req: NextRequest) {
     try {
@@ -13,8 +14,9 @@ export async function GET(req: NextRequest) {
         const userRole = session.user.role;
         const userId = session.user.id;
 
+        const hasReadPermission = await checkPermission(session.user.id, "ATTENDANCE", "canRead");
         // Ensure user is authorized
-        if (userRole !== "OWNER" && userRole !== "MANAGER" && userRole !== "HR") {
+        if (!hasReadPermission && userRole !== "OWNER") {
             // For standard employees just redirect them gracefully
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
@@ -51,6 +53,27 @@ export async function POST(req: NextRequest) {
 
         if (!employeeId || !date || !startTime || !endTime || calculatedHours === undefined) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        }
+
+        const hasWritePermission = await checkPermission(session.user.id, "ATTENDANCE", "canWrite");
+        if (!hasWritePermission && session.user.role !== "OWNER") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        }
+
+        // Component 3: Overtime vs Sick Leave Conflict Guard
+        const targetDate = new Date(date);
+        
+        const existingLeave = await prisma.leaveRequest.findFirst({
+            where: {
+                employeeId,
+                status: "APPROVED",
+                startDate: { lte: targetDate },
+                endDate: { gte: targetDate }
+            }
+        });
+
+        if (existingLeave) {
+            return NextResponse.json({ error: "Employee already has an approved leave request for this date. Cannot claim OT." }, { status: 400 });
         }
 
         const newOT = await prisma.overtimeRequest.create({
