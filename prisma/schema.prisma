@@ -406,6 +406,7 @@ model Product {
   suppliers          Supplier[]          @relation("ProductSuppliers")
   companyBrandId     String?
   companyBrand       CompanyBrand?       @relation(fields: [companyBrandId], references: [id])
+  sourcingItems      SourcingItem[]      @relation("SourcingProductConversion")
 }
 
 model BundleItem {
@@ -1254,7 +1255,9 @@ model CompanyBrand {
   expenses     ExpenseRequest[]
   employees    Employee[]
   orders       Order[]
-  products     Product[]
+  products       Product[]
+  sourcingItems  SourcingItem[]
+  sourcingConfig SourcingConfig?
 }
 
 model UserBrandAccess {
@@ -1282,3 +1285,147 @@ model BankAccount {
   companyBrand CompanyBrand  @relation(fields: [companyBrandId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 }
+
+// ==========================================
+// PRE-ORDER SOURCING & LANDED COST PIPELINE
+// ==========================================
+
+enum SourcingStage {
+  IDEA
+  COST_REVIEW
+  SAMPLE_TESTING
+  APPROVED
+  DROPPED
+}
+
+enum SourcingPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model SourcingConfig {
+  id                        String        @id @default(cuid())
+  companyBrandId            String?       @unique
+  companyBrand              CompanyBrand? @relation(fields: [companyBrandId], references: [id])
+
+  // Exchange Rates
+  rmbExchangeRate           Float         @default(5.0)
+  usdExchangeRate           Float         @default(35.5)
+
+  // Truck / Land Freight Rates
+  truckRatePerKg            Float         @default(40)
+  truckRatePerCbm           Float         @default(7500)
+  truckLeadTime             String        @default("5-7 วัน")
+
+  // Sea Freight Rates
+  seaRatePerKg              Float         @default(25)
+  seaRatePerCbm             Float         @default(4500)
+  seaLeadTime               String        @default("14-20 วัน")
+
+  // Air Freight Rates
+  airRatePerKg              Float         @default(220)
+  airRatePerCbm             Float         @default(18000)
+  airLeadTime               String        @default("3-5 วัน")
+
+  // Default Local & Platform Costs
+  defaultPackagingCost      Float         @default(10)
+  defaultLocalShippingCost  Float         @default(35)
+  defaultPlatformFeePercent Float         @default(6.0)
+  defaultAdSpendPerUnit     Float         @default(50)
+  defaultImportDutyRate     Float         @default(0)
+
+  updatedAt                 DateTime      @updatedAt
+  createdAt                 DateTime      @default(now())
+}
+
+model SourcingItem {
+  id                      String           @id @default(cuid())
+  title                   String
+  sourceUrl               String?
+  sourcePlatform          String           @default("1688") // 1688, AMAZON, TAOBAO, ALIBABA, OTHER
+  imageUrl                String?
+  images                  Json?
+  category                String?
+  supplierName            String?
+  supplierContact         String?
+  notes                   String?
+
+  stage                   SourcingStage    @default(IDEA)
+  dropReason              String?
+  priority                SourcingPriority @default(MEDIUM)
+  orderIndex              Float            @default(0)
+
+  // Cost Breakdown Input
+  foreignCurrency         String           @default("RMB") // RMB, USD, THB
+  foreignPrice            Float            @default(0)
+  foreignDomesticShipping Float            @default(0)
+  exchangeRate            Float            @default(5.0)
+  shippingMethod          String           @default("WEIGHT") // WEIGHT, CBM, ACTUAL_MAX
+  selectedChannel         String           @default("TRUCK")  // TRUCK, SEA, AIR
+  weightKg                Float            @default(0)
+  lengthCm                Float            @default(0)
+  widthCm                 Float            @default(0)
+  heightCm                Float            @default(0)
+  cbm                     Float            @default(0)
+  shippingRatePerKg       Float            @default(0)
+  shippingRatePerCbm      Float            @default(0)
+
+  // Multi-Channel Freight Rates for this Item
+  truckRatePerKg          Float            @default(40)
+  truckRatePerCbm         Float            @default(7500)
+  seaRatePerKg            Float            @default(25)
+  seaRatePerCbm           Float            @default(4500)
+  airRatePerKg            Float            @default(220)
+  airRatePerCbm           Float            @default(18000)
+
+  importDutyRate          Float            @default(0)
+  packagingCost           Float            @default(10)
+  localShippingCost       Float            @default(35)
+  platformFeePercent      Float            @default(6)
+  adSpendPerUnit          Float            @default(50)
+
+  // Multi-Channel Computed Financial Metrics (Snapshot)
+  shippingTruckTHB        Float            @default(0)
+  landedCostTruckTHB      Float            @default(0)
+  totalCostTruckTHB       Float            @default(0)
+  profitTruckTHB          Float            @default(0)
+  marginTruckPercent      Float            @default(0)
+
+  shippingSeaTHB          Float            @default(0)
+  landedCostSeaTHB        Float            @default(0)
+  totalCostSeaTHB         Float            @default(0)
+  profitSeaTHB            Float            @default(0)
+  marginSeaPercent        Float            @default(0)
+
+  shippingAirTHB          Float            @default(0)
+  landedCostAirTHB        Float            @default(0)
+  totalCostAirTHB         Float            @default(0)
+  profitAirTHB            Float            @default(0)
+  marginAirPercent        Float            @default(0)
+
+  // Primary Selected Channel Metrics (Snapshot)
+  landedCostTHB           Float            @default(0)
+  totalCostTHB            Float            @default(0)
+  targetSellingPrice      Float            @default(0)
+  estProfitPerUnit        Float            @default(0)
+  estMarginPercent        Float            @default(0)
+  breakevenPrice          Float            @default(0)
+
+  // Converted Product Link
+  convertedProductId      String?
+  convertedProduct        Product?         @relation("SourcingProductConversion", fields: [convertedProductId], references: [id])
+  convertedAt             DateTime?
+
+  // Brand Scoping & Audit
+  companyBrandId          String?
+  companyBrand            CompanyBrand?    @relation(fields: [companyBrandId], references: [id])
+  createdById             String?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  @@index([stage])
+  @@index([companyBrandId])
+}
+

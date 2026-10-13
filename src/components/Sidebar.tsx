@@ -44,6 +44,9 @@ const navigation = [
             { name: "🛒 ยอดขายรายวัน (Daily Revenue)", href: "/oms/orders" },
             { name: "⚡ นำเข้าออร์เดอร์ (Import)", href: "/oms/import" },
             { name: "🤖 ลดแชทป้อนบิลด้วย AI (Parser)", href: "/oms/parser" },
+            // Sourcing & Pre-order
+            { name: "🎯 ค้นหาสินค้า & ไปป์ไลน์ (Sourcing Pipeline)", href: "/oms/sourcing" },
+            { name: "⚙️ ตั้งค่าเรทขนส่งพรีออเดอร์ (Sourcing Rates)", href: "/oms/settings/sourcing" },
             // Inventory & Assets
             { name: "🛍️ ศูนย์รวมสินค้า (Products)", href: "/oms/products" },
             { name: "🏢 จัดการคลัง (Locations)", href: "/oms/settings/locations" },
