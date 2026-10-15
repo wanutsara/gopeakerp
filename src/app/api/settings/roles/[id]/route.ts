@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { checkPermission } from "@/lib/rbac";
 
 export async function PUT(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        const hasPermission = await checkPermission(session.user.id, "EXECUTIVE", "canWrite");
+        if (!hasPermission) {
+            return NextResponse.json({ error: "Forbidden: role administration requires EXECUTIVE write access." }, { status: 403 });
+        }
+
         const { id } = await params;
         const body = await request.json();
         const { name, description, permissions } = body;
@@ -58,6 +70,15 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        const hasPermission = await checkPermission(session.user.id, "EXECUTIVE", "canDelete");
+        if (!hasPermission) {
+            return NextResponse.json({ error: "Forbidden: role administration requires EXECUTIVE delete access." }, { status: 403 });
+        }
+
         const { id } = await params;
 
         // Check if role is in use

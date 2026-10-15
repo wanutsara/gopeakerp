@@ -8,11 +8,15 @@ import { checkPermission } from "@/lib/rbac";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const session = await getServerSession(authOptions);
+        const hasPermission = await checkPermission(session?.user?.id, "EMPLOYEES", "canRead");
+        if (!hasPermission) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
         const { id } = await params;
         const employee = await prisma.employee.findUnique({
             where: { id },
             include: {
-                user: true,
+                user: { select: { id: true, name: true, email: true, role: true, image: true, userRoleId: true } },
                 department: true,
                 leaveBalances: true,
                 documents: true,
