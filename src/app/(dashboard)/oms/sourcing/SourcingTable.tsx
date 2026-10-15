@@ -131,7 +131,7 @@ export default function SourcingTable({
                                         <div className="flex items-center gap-3">
                                             <div className="w-12 h-12 rounded-xl border border-gray-200 bg-gray-50 shrink-0 overflow-hidden">
                                                 {item.imageUrl ? (
-                                                    <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                                                    <img src={item.imageUrl} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-gray-300">
                                                         <PhotoIcon className="w-6 h-6" />

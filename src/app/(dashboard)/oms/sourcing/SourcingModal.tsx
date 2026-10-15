@@ -90,10 +90,19 @@ export default function SourcingModal({
 
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isExtractingUrl, setIsExtractingUrl] = useState(false);
+    const [galleryImages, setGalleryImages] = useState<string[]>([]);
+    const [extractWarning, setExtractWarning] = useState<string | null>(null);
+    const [showAiAssistBox, setShowAiAssistBox] = useState(false);
+    const [rawPasteText, setRawPasteText] = useState('');
 
     // Initialize form on open
     useEffect(() => {
         if (!isOpen) return;
+        setGalleryImages([]);
+        setExtractWarning(null);
+        setShowAiAssistBox(false);
+        setRawPasteText('');
 
         if (initialData) {
             setTitle(initialData.title || '');
@@ -220,18 +229,176 @@ export default function SourcingModal({
             setSourcePlatform('1688');
             setForeignCurrency('RMB');
             setExchangeRate(activeConfig.rmbExchangeRate);
-        } else if (lower.includes('amazon.com') || lower.includes('amazon.')) {
+        } else if (lower.includes('amazon.com') || lower.includes('amazon.') || lower.includes('a.co/')) {
             setSourcePlatform('AMAZON');
             setForeignCurrency('USD');
             setExchangeRate(activeConfig.usdExchangeRate);
-        } else if (lower.includes('taobao.com') || lower.includes('tmall.com')) {
+        } else if (lower.includes('taobao.com') || lower.includes('tmall.com') || lower.includes('tb.cn')) {
             setSourcePlatform('TAOBAO');
             setForeignCurrency('RMB');
             setExchangeRate(activeConfig.rmbExchangeRate);
-        } else if (lower.includes('alibaba.com')) {
+        } else if (lower.includes('alibaba.com') || lower.includes('aliexpress.com')) {
             setSourcePlatform('ALIBABA');
             setForeignCurrency('USD');
             setExchangeRate(activeConfig.usdExchangeRate);
+        }
+    };
+
+    // Fetch & Extract Product Info from URL, Share Text, or Screenshot
+    const handleExtractProductInfo = async (opts?: {
+        targetUrl?: string;
+        rawText?: string;
+        imageBase64?: string;
+        imageMimeType?: string;
+        uploadedImageUrl?: string;
+    }) => {
+        const urlToFetch = (opts?.targetUrl ?? sourceUrl).trim();
+        const textToParse = (opts?.rawText ?? rawPasteText).trim();
+        const imgBase64 = opts?.imageBase64 || '';
+
+        if (!urlToFetch && !textToParse && !imgBase64) {
+            toast.error('กรุณาวางลิงก์สินค้า หรือข้อความ/รูปแคปหน้าจอก่อนครับ');
+            return;
+        }
+
+        setIsExtractingUrl(true);
+        setExtractWarning(null);
+
+        try {
+            const res = await fetch('/api/oms/sourcing/extract', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: urlToFetch,
+                    rawText: textToParse,
+                    imageBase64: imgBase64,
+                    imageMimeType: opts?.imageMimeType || 'image/png'
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'ดึงข้อมูลจากลิงก์ไม่สำเร็จ');
+            }
+
+            if (data.sourceUrl && data.sourceUrl.startsWith('http')) {
+                setSourceUrl(data.sourceUrl);
+            }
+            if (data.sourcePlatform) {
+                setSourcePlatform(data.sourcePlatform);
+            }
+            if (data.foreignCurrency) {
+                setForeignCurrency(data.foreignCurrency);
+                setExchangeRate(
+                    data.foreignCurrency === 'USD'
+                        ? activeConfig.usdExchangeRate
+                        : data.foreignCurrency === 'RMB'
+                        ? activeConfig.rmbExchangeRate
+                        : 1
+                );
+            }
+            if (data.title) {
+                setTitle(data.title);
+            }
+            if (Number(data.foreignPrice) > 0) {
+                setForeignPrice(Number(data.foreignPrice));
+            }
+            if (opts?.uploadedImageUrl) {
+                setImageUrl(opts.uploadedImageUrl);
+            } else if (data.imageUrl) {
+                setImageUrl(data.imageUrl);
+            }
+            if (Array.isArray(data.galleryImages) && data.galleryImages.length > 0) {
+                setGalleryImages(data.galleryImages);
+            }
+            if (data.category) {
+                setCategory(data.category);
+            }
+            if (data.supplierName) {
+                setSupplierName(data.supplierName);
+            }
+            if (Number(data.weightKg) > 0) {
+                setWeightKg(Number(data.weightKg));
+            }
+            if (Number(data.lengthCm) > 0 && Number(data.widthCm) > 0 && Number(data.heightCm) > 0) {
+                setLengthCm(Number(data.lengthCm));
+                setWidthCm(Number(data.widthCm));
+                setHeightCm(Number(data.heightCm));
+                handleDimensionChange(data.lengthCm, data.widthCm, data.heightCm);
+            }
+            if (data.notes) {
+                setNotes(data.notes);
+            }
+
+            if (data.warningMessage) {
+                setExtractWarning(data.warningMessage);
+                setShowAiAssistBox(true);
+                toast('เว็บต้นทางติดระบบป้องกันบอท (Captcha) — สามารถวางภาพแคปหน้าจอหรือข้อความให้ AI ดึงแทนได้ครับ', {
+                    icon: '⚠️'
+                });
+            } else if (data.title || Number(data.foreignPrice) > 0 || data.imageUrl) {
+                toast.success('ดึงข้อมูลสินค้า ราคา และรูปภาพสำเร็จ!');
+            } else {
+                setShowAiAssistBox(true);
+                toast('ดึงข้อมูลบางส่วนแล้ว — หากเว็บติดล็อกอิน สามารถวางภาพแคปหน้าจอให้ AI อ่านได้ครับ', {
+                    icon: '💡'
+                });
+            }
+        } catch (err: any) {
+            toast.error(err.message || 'ไม่สามารถดึงข้อมูลจากลิงก์ได้');
+        } finally {
+            setIsExtractingUrl(false);
+        }
+    };
+
+    // Handle pasting a URL into the URL input box -> auto trigger extraction!
+    const handleUrlPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+        const pastedText = e.clipboardData.getData('text');
+        if (pastedText && (pastedText.includes('http://') || pastedText.includes('https://'))) {
+            e.preventDefault();
+            handleUrlChange(pastedText.trim());
+            handleExtractProductInfo({ targetUrl: pastedText.trim() });
+        }
+    };
+
+    // Handle pasting a screenshot image (Ctrl+V / Cmd+V) to extract product info via Gemini Vision
+    const handleScreenshotPasteOrUpload = async (file: File) => {
+        setIsExtractingUrl(true);
+        setIsUploadingImage(true);
+        try {
+            // 1. Convert to base64 for Gemini Vision
+            const base64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result || ''));
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            // 2. Upload image to Cloudinary in parallel so user gets a hosted image URL
+            const formData = new FormData();
+            formData.append('file', file);
+            const uploadPromise = fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+                .then((r) => r.json())
+                .catch(() => ({}));
+
+            const uploadRes = await uploadPromise;
+            const uploadedUrl = uploadRes?.url || '';
+
+            await handleExtractProductInfo({
+                targetUrl: sourceUrl,
+                rawText: rawPasteText,
+                imageBase64: base64,
+                imageMimeType: file.type || 'image/png',
+                uploadedImageUrl: !imageUrl ? uploadedUrl : undefined
+            });
+        } catch {
+            toast.error('ไม่สามารถอ่านภาพแคปหน้าจอได้');
+        } finally {
+            setIsUploadingImage(false);
+            setIsExtractingUrl(false);
         }
     };
 
@@ -452,32 +619,125 @@ export default function SourcingModal({
                                 </h3>
                             </div>
 
-                            {/* Source URL */}
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center justify-between">
+                            {/* Source URL & Auto-Fetch */}
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
                                     <span>ลิงก์สินค้าต้นทาง (1688 / Amazon)</span>
-                                    <span className="text-[10px] text-blue-600 font-bold lowercase">auto-detect</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAiAssistBox((v) => !v)}
+                                        className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer"
+                                    >
+                                        {showAiAssistBox ? 'ซ่อนตัวช่วยแคปจอ AI' : '📸 เว็บติดล็อกอิน? วางแคปจอ/ข้อความ'}
+                                    </button>
                                 </label>
-                                <div className="relative">
-                                    <input
-                                        type="url"
-                                        value={sourceUrl}
-                                        onChange={(e) => handleUrlChange(e.target.value)}
-                                        placeholder="วางลิงก์ 1688, Amazon, Taobao..."
-                                        className="w-full pl-3 pr-9 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 font-mono text-gray-900"
-                                    />
-                                    {sourceUrl && (
-                                        <a
-                                            href={sourceUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="absolute right-2.5 top-2.5 text-gray-400 hover:text-blue-600"
-                                            title="เปิดลิงก์"
-                                        >
-                                            <ArrowTopRightOnSquareIcon className="w-4 h-4" />
-                                        </a>
-                                    )}
+                                <div className="flex gap-1.5">
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="text"
+                                            value={sourceUrl}
+                                            onChange={(e) => handleUrlChange(e.target.value)}
+                                            onPaste={handleUrlPaste}
+                                            placeholder="วางลิงก์ 1688, Amazon, Taobao เพื่อดึงราคา+รูปอัตโนมัติ..."
+                                            className="w-full pl-3 pr-8 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 font-mono text-gray-900"
+                                        />
+                                        {sourceUrl && (
+                                            <a
+                                                href={sourceUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="absolute right-2.5 top-2.5 text-gray-400 hover:text-blue-600"
+                                                title="เปิดลิงก์ต้นทาง"
+                                            >
+                                                <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+                                            </a>
+                                        )}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={isExtractingUrl || (!sourceUrl && !rawPasteText)}
+                                        onClick={() => handleExtractProductInfo()}
+                                        className="px-3 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer transition-all"
+                                        title="ดึงชื่อสินค้า ราคา และรูปภาพจากลิงก์อัตโนมัติ"
+                                    >
+                                        {isExtractingUrl ? (
+                                            <>
+                                                <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
+                                                <span>กำลังดึง...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <SparklesIcon className="w-3.5 h-3.5" />
+                                                <span>ดึงข้อมูลเว็บ</span>
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
+                                <p className="text-[11px] text-gray-500">
+                                    💡 วางลิงก์เพื่อดึง <b>ชื่อสินค้า (แปลไทย), ราคาต้นทาง, รูปภาพ และน้ำหนัก</b> อัตโนมัติ
+                                </p>
+
+                                {extractWarning && (
+                                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
+                                        ⚠️ {extractWarning}
+                                    </div>
+                                )}
+
+                                {showAiAssistBox && (
+                                    <div
+                                        onPaste={(e) => {
+                                            const items = e.clipboardData?.items;
+                                            if (items) {
+                                                for (const item of Array.from(items)) {
+                                                    if (item.type.startsWith('image/')) {
+                                                        const file = item.getAsFile();
+                                                        if (file) {
+                                                            e.preventDefault();
+                                                            handleScreenshotPasteOrUpload(file);
+                                                            return;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }}
+                                        className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 space-y-2"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[11px] font-black text-indigo-950">
+                                                🤖 AI ดึงข้อมูลจากภาพแคปหน้าจอ / ข้อความหน้าเว็บ (แก้ปัญหา 1688 ติดล็อกอิน)
+                                            </span>
+                                            <label className="cursor-pointer px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold">
+                                                📸 เลือกรูปแคปจอ
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        const f = e.target.files?.[0];
+                                                        if (f) handleScreenshotPasteOrUpload(f);
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                        <textarea
+                                            value={rawPasteText}
+                                            onChange={(e) => setRawPasteText(e.target.value)}
+                                            rows={2}
+                                            placeholder="คลิกช่องนี้แล้วกด Ctrl+V (หรือ Cmd+V) เพื่อวาง 'ภาพแคปหน้าจอ 1688' หรือวางข้อความที่ก๊อปมาจากหน้าสินค้า..."
+                                            className="w-full px-2.5 py-1.5 text-xs bg-white border border-indigo-200 rounded-lg text-gray-800 focus:outline-none focus:border-indigo-500"
+                                        />
+                                        {rawPasteText && (
+                                            <button
+                                                type="button"
+                                                disabled={isExtractingUrl}
+                                                onClick={() => handleExtractProductInfo({ rawText: rawPasteText })}
+                                                className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold cursor-pointer"
+                                            >
+                                                ✨ ให้ AI สกัดราคา + แปลชื่อสินค้าจากข้อความนี้
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Platform & Priority */}
@@ -563,7 +823,7 @@ export default function SourcingModal({
                             </div>
 
                             {/* Product Image */}
-                            <div>
+                            <div className="space-y-2">
                                 <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
                                     <span>รูปภาพสินค้า</span>
                                     {isUploadingImage && <span className="text-[10px] text-blue-600 animate-pulse font-bold">กำลังอัปโหลด...</span>}
@@ -571,7 +831,12 @@ export default function SourcingModal({
                                 <div className="flex gap-3 items-start">
                                     <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
                                         {imageUrl ? (
-                                            <img src={imageUrl} alt="preview" className="w-full h-full object-cover" />
+                                            <img
+                                                src={imageUrl}
+                                                alt="preview"
+                                                referrerPolicy="no-referrer"
+                                                className="w-full h-full object-cover"
+                                            />
                                         ) : (
                                             <PhotoIcon className="w-6 h-6 text-gray-300" />
                                         )}
@@ -607,6 +872,35 @@ export default function SourcingModal({
                                         </div>
                                     </div>
                                 </div>
+
+                                {galleryImages.length > 1 && (
+                                    <div className="pt-1">
+                                        <span className="block text-[10px] font-bold text-gray-500 mb-1">
+                                            รูปที่ดึงได้จากหน้าเว็บ (คลิกเพื่อเลือกรูปหลัก):
+                                        </span>
+                                        <div className="flex gap-1.5 overflow-x-auto pb-1">
+                                            {galleryImages.map((img, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => setImageUrl(img)}
+                                                    className={`w-10 h-10 rounded-lg overflow-hidden border-2 shrink-0 cursor-pointer transition-all ${
+                                                        imageUrl === img
+                                                            ? 'border-blue-600 ring-2 ring-blue-200'
+                                                            : 'border-gray-200 opacity-75 hover:opacity-100'
+                                                    }`}
+                                                >
+                                                    <img
+                                                        src={img}
+                                                        alt={`thumb-${idx}`}
+                                                        referrerPolicy="no-referrer"
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Notes */}
