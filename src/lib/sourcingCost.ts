@@ -78,11 +78,16 @@ export interface ChannelBreakdownResult {
     shippingByCbmTHB: number;
     shippingTHB: number;
     landedCostTHB: number;
+    costBeforeAdsTHB: number;
+    profitBeforeAdsTHB: number;
     totalCostTHB: number;
     profitTHB: number;
     marginPercent: number;
     markupPercent: number;
     breakevenPrice: number;
+    minSellingPriceBeforeAds: number;
+    breakEvenRoas: number;
+    targetRoas: number;
 }
 
 export interface CostCalculationResult {
@@ -109,12 +114,17 @@ export interface CostCalculationResult {
     selectedChannel: ShippingChannel;
     internationalShippingTHB: number;
     landedCostTHB: number;
+    costBeforeAdsTHB: number;
+    profitBeforeAdsTHB: number;
     totalCostTHB: number;
     targetSellingPrice: number;
     estProfitPerUnit: number;
     estMarginPercent: number;
     markupPercent: number;
     breakevenPrice: number;
+    minSellingPriceBeforeAds: number;
+    breakEvenRoas: number;
+    targetRoas: number;
 }
 
 const round2 = (num: number): number => {
@@ -159,26 +169,36 @@ export function calculateLandedCost(input: CostCalculationInput): CostCalculatio
     const feeRatio = 1 - platformFeePercent / 100;
 
     // 4. Channel Rates (with fallback to defaults if not set)
-    const truckRatePerKg = input.truckRatePerKg !== undefined && Number(input.truckRatePerKg) > 0
-        ? Number(input.truckRatePerKg)
-        : (Number(input.shippingRatePerKg) > 0 ? Number(input.shippingRatePerKg) : DEFAULT_SOURCING_CONFIG.truckRatePerKg);
-    const truckRatePerCbm = input.truckRatePerCbm !== undefined && Number(input.truckRatePerCbm) > 0
-        ? Number(input.truckRatePerCbm)
-        : (Number(input.shippingRatePerCbm) > 0 ? Number(input.shippingRatePerCbm) : DEFAULT_SOURCING_CONFIG.truckRatePerCbm);
+    const truckRatePerKg =
+        input.truckRatePerKg !== undefined && Number(input.truckRatePerKg) > 0
+            ? Number(input.truckRatePerKg)
+            : Number(input.shippingRatePerKg) > 0
+            ? Number(input.shippingRatePerKg)
+            : DEFAULT_SOURCING_CONFIG.truckRatePerKg;
+    const truckRatePerCbm =
+        input.truckRatePerCbm !== undefined && Number(input.truckRatePerCbm) > 0
+            ? Number(input.truckRatePerCbm)
+            : Number(input.shippingRatePerCbm) > 0
+            ? Number(input.shippingRatePerCbm)
+            : DEFAULT_SOURCING_CONFIG.truckRatePerCbm;
 
-    const seaRatePerKg = input.seaRatePerKg !== undefined && Number(input.seaRatePerKg) > 0
-        ? Number(input.seaRatePerKg)
-        : DEFAULT_SOURCING_CONFIG.seaRatePerKg;
-    const seaRatePerCbm = input.seaRatePerCbm !== undefined && Number(input.seaRatePerCbm) > 0
-        ? Number(input.seaRatePerCbm)
-        : DEFAULT_SOURCING_CONFIG.seaRatePerCbm;
+    const seaRatePerKg =
+        input.seaRatePerKg !== undefined && Number(input.seaRatePerKg) > 0
+            ? Number(input.seaRatePerKg)
+            : DEFAULT_SOURCING_CONFIG.seaRatePerKg;
+    const seaRatePerCbm =
+        input.seaRatePerCbm !== undefined && Number(input.seaRatePerCbm) > 0
+            ? Number(input.seaRatePerCbm)
+            : DEFAULT_SOURCING_CONFIG.seaRatePerCbm;
 
-    const airRatePerKg = input.airRatePerKg !== undefined && Number(input.airRatePerKg) > 0
-        ? Number(input.airRatePerKg)
-        : DEFAULT_SOURCING_CONFIG.airRatePerKg;
-    const airRatePerCbm = input.airRatePerCbm !== undefined && Number(input.airRatePerCbm) > 0
-        ? Number(input.airRatePerCbm)
-        : DEFAULT_SOURCING_CONFIG.airRatePerCbm;
+    const airRatePerKg =
+        input.airRatePerKg !== undefined && Number(input.airRatePerKg) > 0
+            ? Number(input.airRatePerKg)
+            : DEFAULT_SOURCING_CONFIG.airRatePerKg;
+    const airRatePerCbm =
+        input.airRatePerCbm !== undefined && Number(input.airRatePerCbm) > 0
+            ? Number(input.airRatePerCbm)
+            : DEFAULT_SOURCING_CONFIG.airRatePerCbm;
 
     const shippingMethod = (input.shippingMethod || 'WEIGHT') as ShippingCalcMethod;
 
@@ -201,12 +221,29 @@ export function calculateLandedCost(input: CostCalculationInput): CostCalculatio
         }
 
         const landedCostTHB = round2(foreignBaseTHB + shippingTHB + importDutyTHB);
-        const totalCostTHB = round2(landedCostTHB + localFulfillmentTHB + platformFeeTHB + marketingTHB);
+        const costBeforeAdsTHB = round2(landedCostTHB + localFulfillmentTHB + platformFeeTHB);
+        const profitBeforeAdsTHB = round2(targetSellingPrice - costBeforeAdsTHB);
+
+        const totalCostTHB = round2(costBeforeAdsTHB + marketingTHB);
         const profitTHB = round2(targetSellingPrice - totalCostTHB);
         const marginPercent = targetSellingPrice > 0 ? round2((profitTHB / targetSellingPrice) * 100) : 0;
         const markupPercent = totalCostTHB > 0 ? round2((profitTHB / totalCostTHB) * 100) : 0;
-        const fixedCosts = landedCostTHB + localFulfillmentTHB + marketingTHB;
-        const breakevenPrice = feeRatio > 0 ? round2(fixedCosts / feeRatio) : round2(fixedCosts);
+
+        const fixedCostsNoAds = landedCostTHB + localFulfillmentTHB;
+        const minSellingPriceBeforeAds = feeRatio > 0 ? round2(fixedCostsNoAds / feeRatio) : round2(fixedCostsNoAds);
+
+        const fixedCostsWithAds = fixedCostsNoAds + marketingTHB;
+        const breakevenPrice = feeRatio > 0 ? round2(fixedCostsWithAds / feeRatio) : round2(fixedCostsWithAds);
+
+        // Break-Even ROAS: Revenue / Max Allowed Ad Spend (= Selling Price / Profit Before Ads)
+        const breakEvenRoas =
+            profitBeforeAdsTHB > 0 && targetSellingPrice > 0
+                ? round2(targetSellingPrice / profitBeforeAdsTHB)
+                : 0;
+
+        // Target ROAS based on configured Ad Spend per unit (= Selling Price / Ad Spend per unit)
+        const targetRoas =
+            marketingTHB > 0 && targetSellingPrice > 0 ? round2(targetSellingPrice / marketingTHB) : 0;
 
         return {
             channel,
@@ -217,11 +254,16 @@ export function calculateLandedCost(input: CostCalculationInput): CostCalculatio
             shippingByCbmTHB,
             shippingTHB,
             landedCostTHB,
+            costBeforeAdsTHB,
+            profitBeforeAdsTHB,
             totalCostTHB,
             profitTHB,
             marginPercent,
             markupPercent,
-            breakevenPrice
+            breakevenPrice,
+            minSellingPriceBeforeAds,
+            breakEvenRoas,
+            targetRoas
         };
     };
 
@@ -256,11 +298,16 @@ export function calculateLandedCost(input: CostCalculationInput): CostCalculatio
         selectedChannel,
         internationalShippingTHB: activeChannelResult.shippingTHB,
         landedCostTHB: activeChannelResult.landedCostTHB,
+        costBeforeAdsTHB: activeChannelResult.costBeforeAdsTHB,
+        profitBeforeAdsTHB: activeChannelResult.profitBeforeAdsTHB,
         totalCostTHB: activeChannelResult.totalCostTHB,
         targetSellingPrice,
         estProfitPerUnit: activeChannelResult.profitTHB,
         estMarginPercent: activeChannelResult.marginPercent,
         markupPercent: activeChannelResult.markupPercent,
-        breakevenPrice: activeChannelResult.breakevenPrice
+        breakevenPrice: activeChannelResult.breakevenPrice,
+        minSellingPriceBeforeAds: activeChannelResult.minSellingPriceBeforeAds,
+        breakEvenRoas: activeChannelResult.breakEvenRoas,
+        targetRoas: activeChannelResult.targetRoas
     };
 }

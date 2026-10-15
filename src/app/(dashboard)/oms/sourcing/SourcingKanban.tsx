@@ -268,7 +268,7 @@ export default function SourcingKanban({
                                                             {/* Top Row: Thumbnail + Title */}
                                                             <div className="flex gap-3 items-start">
                                                                 <div className="w-14 h-14 rounded-xl border border-gray-200 bg-gray-50 shrink-0 overflow-hidden relative">
-                                                                    {item.imageUrl ? (
+                                                                    {item.imageUrl && !/detail\.1688\.com\/offer\//i.test(item.imageUrl) ? (
                                                                         <img
                                                                             src={item.imageUrl}
                                                                             alt={item.title}
@@ -295,8 +295,21 @@ export default function SourcingKanban({
                                                                 </div>
                                                             </div>
 
+                                                            {/* ROAS Intelligence Pill */}
+                                                            <div className="mt-2.5 px-2.5 py-1.5 bg-indigo-50/80 rounded-xl border border-indigo-200/80 flex items-center justify-between text-[10px]">
+                                                                <span className="font-bold text-indigo-950">
+                                                                    🎯 ยิงแอดคุ้มทุน:{' '}
+                                                                    <strong className="text-indigo-700">
+                                                                        {calc.breakEvenRoas > 0 ? `ROAS > ${calc.breakEvenRoas.toFixed(2)}x` : 'ขาดทุน'}
+                                                                    </strong>
+                                                                </span>
+                                                                <span className="font-bold text-amber-800 bg-amber-100/80 px-1.5 py-0.5 rounded">
+                                                                    เป้า ≥ {calc.targetRoas > 0 ? `${calc.targetRoas.toFixed(1)}x` : '-'}
+                                                                </span>
+                                                            </div>
+
                                                             {/* Itemized Base Costs Summary Pill */}
-                                                            <div className="mt-2.5 px-2.5 py-1.5 bg-slate-50 rounded-xl border border-slate-200/70 flex flex-wrap items-center justify-between gap-1 text-[10px] font-semibold text-gray-600">
+                                                            <div className="mt-1.5 px-2.5 py-1 bg-slate-50 rounded-xl border border-slate-200/70 flex flex-wrap items-center justify-between gap-1 text-[10px] font-semibold text-gray-600">
                                                                 <span>
                                                                     ค่าของ {currSym}{item.foreignPrice} (฿{calc.foreignBaseTHB.toFixed(0)})
                                                                 </span>

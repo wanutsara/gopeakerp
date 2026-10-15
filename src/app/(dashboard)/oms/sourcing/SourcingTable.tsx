@@ -130,7 +130,7 @@ export default function SourcingTable({
                                     <td className="py-3 px-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-12 h-12 rounded-xl border border-gray-200 bg-gray-50 shrink-0 overflow-hidden">
-                                                {item.imageUrl ? (
+                                                {item.imageUrl && !/detail\.1688\.com\/offer\//i.test(item.imageUrl) ? (
                                                     <img src={item.imageUrl} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-gray-300">
@@ -233,7 +233,7 @@ export default function SourcingTable({
                                         </div>
                                     </td>
 
-                                    {/* Local & Marketing Breakdown */}
+                                    {/* Local & Marketing Breakdown + ROAS */}
                                     <td className="py-3 px-3 text-[11px]">
                                         <div className="text-gray-700">
                                             📦 แพ็ค+ส่งไทย: <strong>฿{calc.localFulfillmentTHB.toFixed(0)}</strong>
@@ -241,11 +241,19 @@ export default function SourcingTable({
                                         <div className="text-gray-500">
                                             📢 แอด+คอม: <strong>฿{(calc.marketingTHB + calc.platformFeeTHB).toFixed(0)}</strong>
                                         </div>
+                                        <div className="mt-0.5 text-[10px] font-black text-indigo-700">
+                                            🎯 ROAS คุ้มทุน: {calc.breakEvenRoas > 0 ? `> ${calc.breakEvenRoas.toFixed(2)}x` : 'ขาดทุน'}
+                                        </div>
                                     </td>
 
-                                    {/* Target Selling Price */}
-                                    <td className="py-3 px-3 font-black text-blue-600 text-sm">
-                                        ฿{item.targetSellingPrice.toLocaleString('th-TH', { maximumFractionDigits: 0 })}
+                                    {/* Target Selling Price & Target ROAS */}
+                                    <td className="py-3 px-3">
+                                        <div className="font-black text-blue-600 text-sm">
+                                            ฿{item.targetSellingPrice.toLocaleString('th-TH', { maximumFractionDigits: 0 })}
+                                        </div>
+                                        <div className="text-[10px] font-bold text-amber-700">
+                                            เป้า ROAS ≥ {calc.targetRoas > 0 ? `${calc.targetRoas.toFixed(1)}x` : '-'}
+                                        </div>
                                     </td>
 
                                     {/* Stage Selector */}
